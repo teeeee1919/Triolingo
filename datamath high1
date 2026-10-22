@@ -1,0 +1,537 @@
+/* 고1 수학 (공통수학1 · 공통수학2) 콘텐츠
+   수식은 KaTeX 문법($...$ 인라인, $$...$$ 블록)을 사용합니다.
+   String.raw 를 써서 \frac 같은 역슬래시를 그대로 적을 수 있습니다. */
+const r = String.raw;
+
+window.MATH_HIGH1 = {
+  gradeName: '고1',
+  units: [
+    /* ───────────────────────── 1. 다항식 ───────────────────────── */
+    {
+      id: 'polynomial', no: 1, part: '공통수학1', title: '다항식',
+      summary: '곱셈공식, 나머지정리, 인수분해',
+      sections: [
+        {
+          title: '곱셈공식과 그 변형',
+          body: r`
+<p>식을 직접 전개하지 않고 <strong>공식 하나로 바로 계산</strong>하는 것이 이 단원의 핵심입니다.</p>
+<div class="formula">
+$$(a+b)^2 = a^2+2ab+b^2,\qquad (a-b)^2=a^2-2ab+b^2$$
+$$(a+b)^3 = a^3+3a^2b+3ab^2+b^3$$
+$$a^3+b^3=(a+b)(a^2-ab+b^2),\qquad a^3-b^3=(a-b)(a^2+ab+b^2)$$
+$$(a+b+c)^2=a^2+b^2+c^2+2ab+2bc+2ca$$
+</div>
+<p>시험에는 공식을 그대로 쓰기보다 <strong>변형해서</strong> 자주 나옵니다.</p>
+<div class="formula">
+$$a^2+b^2=(a+b)^2-2ab$$
+$$a^3+b^3=(a+b)^3-3ab(a+b)$$
+</div>`,
+          tip: r`
+<p><strong>큰 수 계산</strong>은 곱셈공식으로 바꾸면 암산이 됩니다.</p>
+<ul>
+<li>$101^2=(100+1)^2=10000+200+1=10201$</li>
+<li>$99\times101=(100-1)(100+1)=100^2-1=9999$</li>
+<li>$998^2=(1000-2)^2=1000000-4000+4=996004$</li>
+</ul>
+<p>"기준이 되는 쉬운 수(100, 1000)"를 찾아서 $\pm$로 쪼개는 것이 비결입니다.</p>`
+        },
+        {
+          title: '나머지정리와 인수정리',
+          body: r`
+<p>다항식 $f(x)$를 $x-a$로 나눈 <strong>나머지는 $f(a)$</strong> 입니다. 직접 나눌 필요가 없습니다.</p>
+<div class="formula">
+$$f(x)\div(x-a) \text{의 나머지}=f(a)$$
+$$f(ax+b)\text{로 나눈 나머지}=f\!\left(-\tfrac{b}{a}\right)$$
+</div>
+<p><strong>인수정리</strong>: $f(a)=0$ 이면 $f(x)$는 $x-a$로 나누어떨어집니다. 즉 $(x-a)$가 인수입니다.</p>`,
+          tip: r`
+<p>나눗셈을 하지 말고 <strong>나눈 식이 0이 되는 값을 대입</strong>하세요.</p>
+<p>$2x-4$로 나눈다면 $2x-4=0$ 이므로 $x=2$를 대입하면 끝입니다.</p>`
+        },
+        {
+          title: '인수분해 순서와 조립제법',
+          body: r`
+<p>인수분해는 다음 순서대로 시도하면 막히지 않습니다.</p>
+<ol>
+<li><strong>공통인수</strong>로 묶기</li>
+<li><strong>공식</strong> 적용 (완전제곱, 합차, 세제곱)</li>
+<li>같은 모양이 반복되면 <strong>치환</strong> (예: $x^2+x=A$)</li>
+<li>삼차 이상이면 <strong>인수정리</strong>로 한 인수를 찾고 <strong>조립제법</strong>으로 나누기</li>
+</ol>`,
+          tip: r`
+<p><strong>인수정리로 후보 찾는 법</strong>: $f(x)$의 상수항의 약수를 $\pm$로 대입해 보세요. 최고차항 계수가 1이면 후보는 대부분 $\pm1,\pm2,\pm3$ 안에서 나옵니다.</p>
+<p><strong>조립제법</strong>은 문자를 지우고 계수만 적어서 나눕니다. 빠진 차수는 반드시 0을 적으세요. ($x^3+2x-5 \to 1,\,0,\,2,\,-5$)</p>`
+        }
+      ],
+      examples: [
+        {
+          q: r`$f(x)=x^3-2x^2+3x-4$ 를 $x-2$ 로 나눈 나머지를 구하시오.`,
+          a: r`<p>나눗셈 없이 $x=2$ 를 대입합니다.</p>
+<p>$f(2)=8-8+6-4=2$</p><p><strong>답: 2</strong></p>`
+        },
+        {
+          q: r`$x^3-6x^2+11x-6$ 을 인수분해하시오.`,
+          a: r`<p>상수항 $-6$ 의 약수를 대입해 봅니다. $f(1)=1-6+11-6=0$ 이므로 $(x-1)$ 이 인수입니다.</p>
+<p>조립제법으로 나누면 몫은 $x^2-5x+6$ 입니다.</p>
+<p>$x^2-5x+6=(x-2)(x-3)$</p>
+<p><strong>답: $(x-1)(x-2)(x-3)$</strong></p>`
+        },
+        {
+          q: r`$a+b=5,\ ab=3$ 일 때 $a^3+b^3$ 의 값을 구하시오.`,
+          a: r`<p>$a^3+b^3=(a+b)^3-3ab(a+b)$ 에 대입합니다.</p>
+<p>$=125-3\cdot3\cdot5=125-45=80$</p><p><strong>답: 80</strong></p>`
+        }
+      ]
+    },
+
+    /* ───────────────────────── 2. 방정식과 부등식 ───────────────────────── */
+    {
+      id: 'equation', no: 2, part: '공통수학1', title: '방정식과 부등식',
+      summary: '복소수, 이차방정식, 이차부등식',
+      sections: [
+        {
+          title: '복소수',
+          body: r`
+<p>제곱해서 $-1$ 이 되는 수를 $i$ 라 하고, $i^2=-1$ 로 약속합니다. 복소수는 $a+bi$ ($a,b$ 는 실수) 꼴입니다.</p>
+<ul>
+<li>켤레복소수: $\overline{a+bi}=a-bi$</li>
+<li>계산은 $i$ 를 문자처럼 다루다가 $i^2$ 이 나오면 $-1$ 로 바꿉니다.</li>
+<li>두 복소수가 같을 조건: 실수부분끼리, 허수부분끼리 같다.</li>
+</ul>`,
+          tip: r`
+<p><strong>$i$ 의 거듭제곱은 4개 주기</strong>로 반복됩니다.</p>
+<div class="formula">$$i,\ -1,\ -i,\ 1,\ i,\ -1,\ \cdots$$</div>
+<p>지수를 <strong>4로 나눈 나머지</strong>만 보세요. 나머지가 0이면 1, 1이면 $i$, 2이면 $-1$, 3이면 $-i$ 입니다.</p>
+<p>분모에 복소수가 있으면 <strong>켤레복소수를 분모·분자에 곱해</strong> 실수로 만듭니다.</p>`
+        },
+        {
+          title: '이차방정식과 판별식',
+          body: r`
+<p>$ax^2+bx+c=0$ 의 근은 근의 공식으로 구합니다.</p>
+<div class="formula">$$x=\frac{-b\pm\sqrt{b^2-4ac}}{2a}$$</div>
+<p>근의 종류는 <strong>판별식 $D=b^2-4ac$</strong> 의 부호로 판단합니다.</p>
+<ul>
+<li>$D>0$ : 서로 다른 두 실근</li>
+<li>$D=0$ : 중근 (실근 하나)</li>
+<li>$D<0$ : 서로 다른 두 허근</li>
+</ul>`,
+          tip: r`
+<p>$b$ 가 짝수이면 <strong>$b'=b/2$</strong> 를 쓰는 공식이 계산이 훨씬 빠릅니다.</p>
+<div class="formula">$$x=\frac{-b'\pm\sqrt{b'^2-ac}}{a}$$</div>
+<p>예: $x^2-6x+4=0$ 은 $b'=-3$ 이므로 $x=3\pm\sqrt{9-4}=3\pm\sqrt5$.</p>
+<p>근의 공식에 대입하기 전에 <strong>먼저 인수분해가 되는지</strong> 확인하는 습관을 들이세요.</p>`
+        },
+        {
+          title: '근과 계수의 관계',
+          body: r`
+<p>두 근을 $\alpha,\beta$ 라 하면 <strong>근을 구하지 않고도</strong> 합과 곱을 알 수 있습니다.</p>
+<div class="formula">$$\alpha+\beta=-\frac{b}{a},\qquad \alpha\beta=\frac{c}{a}$$</div>
+<p>거꾸로 두 수 $\alpha,\beta$ 를 근으로 하는 이차방정식은 다음과 같습니다.</p>
+<div class="formula">$$x^2-(\alpha+\beta)x+\alpha\beta=0$$</div>`,
+          tip: r`
+<p>$\alpha^2+\beta^2$, $\dfrac1\alpha+\dfrac1\beta$ 같은 식은 모두 <strong>합과 곱으로 바꿔서</strong> 풉니다.</p>
+<ul>
+<li>$\alpha^2+\beta^2=(\alpha+\beta)^2-2\alpha\beta$</li>
+<li>$\dfrac1\alpha+\dfrac1\beta=\dfrac{\alpha+\beta}{\alpha\beta}$</li>
+<li>$(\alpha-\beta)^2=(\alpha+\beta)^2-4\alpha\beta$</li>
+</ul>
+<p>계수가 모두 실수인 방정식에서 한 근이 $p+qi$ 이면 <strong>켤레 $p-qi$ 도 근</strong>입니다.</p>`
+        },
+        {
+          title: '이차부등식',
+          body: r`
+<p>$\alpha<\beta$ 일 때 부등식의 해는 포물선 그래프로 바로 읽습니다.</p>
+<div class="formula">
+$$(x-\alpha)(x-\beta)<0 \iff \alpha<x<\beta$$
+$$(x-\alpha)(x-\beta)>0 \iff x<\alpha \ \text{또는}\ x>\beta$$
+</div>
+<p>해가 없거나 모든 실수가 되는 경우는 판별식으로 판단합니다. ($x^2$ 의 계수가 양수일 때)</p>
+<ul>
+<li>$x^2+bx+c>0$ 이 항상 성립 $\iff D<0$</li>
+<li>$x^2+bx+c\le0$ 이 해를 가질 조건 $\iff D\ge0$</li>
+</ul>`,
+          tip: r`
+<p>외울 필요 없이 <strong>"아래로 볼록한 포물선을 그린다"</strong> 하나면 됩니다.</p>
+<p>$<0$ 이면 그래프가 $x$ 축 <strong>아래</strong>인 구간(두 근 사이), $>0$ 이면 <strong>위</strong>인 구간(바깥쪽)입니다. 부호가 헷갈리면 그래프를 5초만 그려 보세요.</p>`
+        }
+      ],
+      examples: [
+        {
+          q: r`$i^{2026}$ 의 값을 구하시오.`,
+          a: r`<p>$2026\div4$ 의 나머지는 2 입니다. ($2024=4\times506$)</p>
+<p>$i^{2026}=i^2=-1$</p><p><strong>답: $-1$</strong></p>`
+        },
+        {
+          q: r`$x^2-5x+3=0$ 의 두 근을 $\alpha,\beta$ 라 할 때 $\alpha^2+\beta^2$ 의 값을 구하시오.`,
+          a: r`<p>근과 계수의 관계에서 $\alpha+\beta=5,\ \alpha\beta=3$ 입니다.</p>
+<p>$\alpha^2+\beta^2=(\alpha+\beta)^2-2\alpha\beta=25-6=19$</p><p><strong>답: 19</strong></p>`
+        },
+        {
+          q: r`이차부등식 $x^2-x-6<0$ 의 해를 구하시오.`,
+          a: r`<p>인수분해하면 $(x-3)(x+2)<0$ 입니다.</p>
+<p>아래로 볼록한 포물선이 $x$ 축 아래에 있는 구간은 두 근 사이입니다.</p>
+<p><strong>답: $-2<x<3$</strong></p>`
+        }
+      ]
+    },
+
+    /* ───────────────────────── 3. 경우의 수 ───────────────────────── */
+    {
+      id: 'counting', no: 3, part: '공통수학1', title: '경우의 수',
+      summary: '합·곱의 법칙, 순열, 조합',
+      sections: [
+        {
+          title: '합의 법칙과 곱의 법칙',
+          body: r`
+<ul>
+<li><strong>합의 법칙</strong>: 두 사건이 <em>동시에 일어나지 않을 때</em>, 각 경우의 수를 <strong>더합니다</strong>.</li>
+<li><strong>곱의 법칙</strong>: 두 사건이 <em>잇달아 일어날 때</em>, 각 경우의 수를 <strong>곱합니다</strong>.</li>
+</ul>`,
+          tip: r`
+<p>문제 문장에서 <strong>"또는"이면 더하기, "그리고(동시에, 차례로)"이면 곱하기</strong>로 번역하세요.</p>
+<p>"적어도 한 개", "~가 아닌" 같은 표현은 <strong>전체에서 반대 경우를 빼는 여사건</strong>이 훨씬 빠릅니다.</p>`
+        },
+        {
+          title: '순열 (순서가 중요한 나열)',
+          body: r`
+<p>서로 다른 $n$ 개에서 $r$ 개를 뽑아 <strong>한 줄로 세우는</strong> 경우의 수입니다.</p>
+<div class="formula">
+$$_nP_r=n(n-1)(n-2)\cdots(n-r+1)\quad(r\text{개의 수를 곱함})$$
+$$n!=n(n-1)\cdots2\cdot1,\qquad {}_nP_n=n!$$
+</div>`,
+          tip: r`
+<p>팩토리얼 공식 대신 <strong>"$n$ 에서 시작해 $r$ 개만 내려가며 곱한다"</strong> 로 외우면 가장 빠릅니다.</p>
+<p>$_7P_3=7\times6\times5=210$ (3개 곱하기)</p>
+<p><strong>이웃하는 경우</strong>: 이웃해야 하는 것들을 한 덩어리로 묶고 나열한 뒤, 덩어리 안의 순서를 곱합니다.</p>
+<p><strong>이웃하지 않는 경우</strong>: 나머지를 먼저 세우고 그 <strong>사이사이와 양 끝</strong>에 끼워 넣습니다.</p>`
+        },
+        {
+          title: '조합 (순서가 없는 선택)',
+          body: r`
+<p>서로 다른 $n$ 개에서 순서 없이 $r$ 개를 <strong>뽑는</strong> 경우의 수입니다.</p>
+<div class="formula">
+$$_nC_r=\frac{{}_nP_r}{r!}=\frac{n!}{r!\,(n-r)!}$$
+$$_nC_r={}_nC_{n-r},\qquad {}_nC_r={}_{n-1}C_{r-1}+{}_{n-1}C_r$$
+</div>`,
+          tip: r`
+<p><strong>줄 세우기면 순열, 뽑기만 하면 조합</strong>입니다.</p>
+<p>계산은 <strong>"분자는 $r$ 개 곱, 분모는 $r!$"</strong> 로 끝냅니다.</p>
+<ul>
+<li>$_7C_3=\dfrac{7\cdot6\cdot5}{3\cdot2\cdot1}=35$</li>
+<li>$_{10}C_8={}_{10}C_2=\dfrac{10\cdot9}{2}=45$ ← $r$ 이 크면 $n-r$ 로 바꾸기</li>
+</ul>
+<p>"특정 원소를 반드시 포함"이면 그 원소는 이미 뽑았다고 보고, 나머지에서 $r-1$ 개를 뽑습니다.</p>`
+        }
+      ],
+      examples: [
+        {
+          q: r`5명 중 3명을 뽑아 일렬로 세우는 경우의 수를 구하시오.`,
+          a: r`<p>순서가 있으므로 순열입니다. $_5P_3=5\times4\times3=60$</p><p><strong>답: 60</strong></p>`
+        },
+        {
+          q: r`남학생 3명, 여학생 4명 중에서 3명을 뽑을 때, 남학생이 적어도 1명 포함되는 경우의 수를 구하시오.`,
+          a: r`<p>여사건(남학생이 0명, 즉 전부 여학생)을 이용합니다.</p>
+<p>전체: $_7C_3=35$, 전부 여학생: $_4C_3=4$</p>
+<p>$35-4=31$</p><p><strong>답: 31</strong></p>`
+        },
+        {
+          q: r`A, B, C, D, E 5명이 일렬로 설 때 A와 B가 이웃하는 경우의 수를 구하시오.`,
+          a: r`<p>A, B를 한 덩어리로 묶으면 4개를 나열: $4!=24$</p>
+<p>덩어리 안에서 A, B 순서: $2!=2$</p>
+<p>$24\times2=48$</p><p><strong>답: 48</strong></p>`
+        }
+      ]
+    },
+
+    /* ───────────────────────── 4. 행렬 ───────────────────────── */
+    {
+      id: 'matrix', no: 4, part: '공통수학1', title: '행렬',
+      summary: '행렬의 뜻과 덧셈·곱셈',
+      sections: [
+        {
+          title: '행렬이란?',
+          body: r`
+<p>수를 직사각형 모양으로 배열한 것을 <strong>행렬</strong>이라 합니다. 가로줄이 <strong>행</strong>, 세로줄이 <strong>열</strong>입니다.</p>
+<div class="formula">$$A=\begin{pmatrix}1&2&3\\4&5&6\end{pmatrix}\quad\Rightarrow\quad 2\times3\text{ 행렬 (2행 3열)}$$</div>
+<p>$i$ 행 $j$ 열의 수를 $(i,j)$ 성분이라 합니다. 두 행렬이 같으려면 <strong>크기가 같고 대응하는 성분이 모두 같아야</strong> 합니다.</p>`,
+          tip: r`<p>행렬 크기는 <strong>"행 먼저, 열 나중"</strong> 입니다. (행 → 가로, 열 → 세로가 아니라 "행(row)이 먼저")</p>`
+        },
+        {
+          title: '덧셈, 뺄셈, 실수배',
+          body: r`
+<p>같은 크기의 행렬끼리만 <strong>같은 자리 성분끼리</strong> 더하거나 뺍니다. 실수배는 모든 성분에 곱합니다.</p>
+<div class="formula">$$\begin{pmatrix}1&2\\3&4\end{pmatrix}+\begin{pmatrix}5&6\\7&8\end{pmatrix}=\begin{pmatrix}6&8\\10&12\end{pmatrix},\qquad 3\begin{pmatrix}1&2\\3&4\end{pmatrix}=\begin{pmatrix}3&6\\9&12\end{pmatrix}$$</div>`,
+          tip: r`<p>연립방정식처럼 $A+B=\ldots,\ A-B=\ldots$ 가 주어지면 <strong>두 식을 더하고 빼서</strong> $A$, $B$ 를 각각 구하면 됩니다.</p>`
+        },
+        {
+          title: '행렬의 곱셈',
+          body: r`
+<p>$(m\times n)$ 행렬과 $(n\times p)$ 행렬은 곱할 수 있고, 결과는 $(m\times p)$ 행렬입니다. <strong>앞 행렬의 행 × 뒤 행렬의 열</strong>로 성분을 만듭니다.</p>
+<div class="formula">$$\begin{pmatrix}a&b\\c&d\end{pmatrix}\begin{pmatrix}p&q\\r&s\end{pmatrix}=\begin{pmatrix}ap+br&aq+bs\\cp+dr&cq+ds\end{pmatrix}$$</div>
+<p>실수와 달리 <strong>교환법칙이 성립하지 않습니다</strong> ($AB\ne BA$ 일 수 있음). 결합법칙과 분배법칙은 성립합니다.</p>`,
+          tip: r`
+<p>곱하기 전에 <strong>크기부터 확인</strong>하세요. 앞 행렬의 열 수 = 뒤 행렬의 행 수여야 합니다.</p>
+<p>곱셈 손계산은 <strong>왼손 검지는 앞 행렬의 행을 따라 →, 오른손 검지는 뒤 행렬의 열을 따라 ↓</strong> 하며 곱해서 더합니다.</p>
+<p>곱셈공식 주의: $(A+B)^2=A^2+AB+BA+B^2$ 입니다. $2AB$ 로 합치면 안 됩니다. ($AB=BA$ 일 때만 가능)</p>`
+        }
+      ],
+      examples: [
+        {
+          q: r`$A=\begin{pmatrix}1&2\\3&4\end{pmatrix},\ B=\begin{pmatrix}0&1\\1&0\end{pmatrix}$ 일 때 $AB$ 와 $BA$ 를 구하시오.`,
+          a: r`<p>$AB=\begin{pmatrix}1\cdot0+2\cdot1&1\cdot1+2\cdot0\\3\cdot0+4\cdot1&3\cdot1+4\cdot0\end{pmatrix}=\begin{pmatrix}2&1\\4&3\end{pmatrix}$</p>
+<p>$BA=\begin{pmatrix}0\cdot1+1\cdot3&0\cdot2+1\cdot4\\1\cdot1+0\cdot3&1\cdot2+0\cdot4\end{pmatrix}=\begin{pmatrix}3&4\\1&2\end{pmatrix}$</p>
+<p><strong>$AB\ne BA$</strong> 이므로 교환법칙이 성립하지 않음을 확인할 수 있습니다.</p>`
+        },
+        {
+          q: r`$A=\begin{pmatrix}2&1\\0&3\end{pmatrix},\ B=\begin{pmatrix}1&0\\4&2\end{pmatrix}$ 일 때 $2A-B$ 를 구하시오.`,
+          a: r`<p>$2A=\begin{pmatrix}4&2\\0&6\end{pmatrix}$ 이므로</p>
+<p>$2A-B=\begin{pmatrix}4-1&2-0\\0-4&6-2\end{pmatrix}=\begin{pmatrix}3&2\\-4&4\end{pmatrix}$</p>`
+        }
+      ]
+    },
+
+    /* ───────────────────────── 5. 도형의 방정식 ───────────────────────── */
+    {
+      id: 'geometry', no: 5, part: '공통수학2', title: '도형의 방정식',
+      summary: '거리, 직선, 원, 이동',
+      sections: [
+        {
+          title: '두 점 사이의 거리와 내분점',
+          body: r`
+<div class="formula">
+$$\overline{AB}=\sqrt{(x_2-x_1)^2+(y_2-y_1)^2}$$
+$$\text{중점}=\left(\frac{x_1+x_2}{2},\ \frac{y_1+y_2}{2}\right)$$
+$$m:n\text{ 내분점}=\left(\frac{mx_2+nx_1}{m+n},\ \frac{my_2+ny_1}{m+n}\right)$$
+</div>`,
+          tip: r`
+<p>거리는 결국 <strong>직각삼각형의 빗변</strong>입니다. 피타고라스 수를 알아두면 루트 계산을 건너뜁니다.</p>
+<p>$(3,4,5),\ (5,12,13),\ (8,15,17)$ 과 그 배수 ($6,8,10$ 등)</p>
+<p>내분점은 <strong>"교차해서 곱한다"</strong> 로 외우세요. $m$ 은 <em>뒤쪽 점</em>의 좌표에, $n$ 은 <em>앞쪽 점</em>의 좌표에 곱합니다.</p>`
+        },
+        {
+          title: '직선의 방정식',
+          body: r`
+<ul>
+<li>기울기 $m$, 지나는 점 $(x_1,y_1)$: $y-y_1=m(x-x_1)$</li>
+<li>두 점 $(x_1,y_1),(x_2,y_2)$ 를 지나는 직선의 기울기: $\dfrac{y_2-y_1}{x_2-x_1}$</li>
+<li>평행: 기울기가 같다 ($m_1=m_2$)</li>
+<li>수직: 기울기의 곱이 $-1$ ($m_1m_2=-1$)</li>
+</ul>
+<p><strong>점과 직선 사이의 거리</strong> (점 $(x_1,y_1)$, 직선 $ax+by+c=0$)</p>
+<div class="formula">$$d=\frac{|ax_1+by_1+c|}{\sqrt{a^2+b^2}}$$</div>`,
+          tip: r`
+<p>점과 직선의 거리는 <strong>"직선을 한쪽으로 몰아 $=0$ 꼴로 만든 다음, 점을 대입한 절댓값을 루트(계수² 합)로 나눈다"</strong> 로 외우세요.</p>
+<p>세 점이 한 직선 위에 있는지는 <strong>두 기울기가 같은지</strong> 만 비교하면 됩니다.</p>`
+        },
+        {
+          title: '원의 방정식',
+          body: r`
+<div class="formula">
+$$(x-a)^2+(y-b)^2=r^2\quad(\text{중심 }(a,b),\ \text{반지름 }r)$$
+$$x^2+y^2+Ax+By+C=0\ \Rightarrow\ \text{완전제곱으로 변형}$$
+</div>
+<p><strong>원과 직선의 위치 관계</strong>는 중심에서 직선까지의 거리 $d$ 와 반지름 $r$ 을 비교합니다.</p>
+<ul>
+<li>$d<r$ : 두 점에서 만난다</li>
+<li>$d=r$ : 접한다</li>
+<li>$d>r$ : 만나지 않는다</li>
+</ul>`,
+          tip: r`
+<p>판별식으로 연립해서 푸는 것보다 <strong>"중심과 직선 사이 거리 vs 반지름"</strong> 이 계산이 훨씬 짧습니다.</p>
+<p>원점이 중심인 원 $x^2+y^2=r^2$ 에 접하고 기울기가 $m$ 인 접선은 공식으로 바로:</p>
+<div class="formula">$$y=mx\pm r\sqrt{m^2+1}$$</div>
+<p>원 위의 점 $(x_1,y_1)$ 에서의 접선은 $x^2+y^2=r^2$ 에서 <strong>$x_1x+y_1y=r^2$</strong> 입니다. (제곱을 하나씩 "나눠 쓰기")</p>`
+        },
+        {
+          title: '평행이동과 대칭이동',
+          body: r`
+<p>점 $(x,y)$ 를 이동하면 도형의 방정식은 다음처럼 바뀝니다.</p>
+<ul>
+<li><strong>평행이동</strong> $(a,b)$ : $x\to x-a,\ y\to y-b$ 로 바꿔 넣는다</li>
+<li><strong>$x$축 대칭</strong> : $y\to -y$</li>
+<li><strong>$y$축 대칭</strong> : $x\to -x$</li>
+<li><strong>원점 대칭</strong> : $x\to -x,\ y\to -y$</li>
+<li><strong>$y=x$ 대칭</strong> : $x\leftrightarrow y$ 서로 바꾸기</li>
+</ul>`,
+          tip: r`<p>평행이동은 <strong>"부호가 반대"</strong> 로 외우세요. 오른쪽으로 2칸 이동하면 $x$ 자리에 $x-2$ 를 넣습니다. 점은 $+2$, 식은 $-2$ 입니다.</p>`
+        }
+      ],
+      examples: [
+        {
+          q: r`점 $(1,2)$ 에서 직선 $3x+4y-5=0$ 까지의 거리를 구하시오.`,
+          a: r`<p>$d=\dfrac{|3\cdot1+4\cdot2-5|}{\sqrt{3^2+4^2}}=\dfrac{6}{5}$</p><p><strong>답: $\dfrac65$</strong></p>`
+        },
+        {
+          q: r`원 $x^2+y^2-4x+6y-3=0$ 의 중심과 반지름을 구하시오.`,
+          a: r`<p>완전제곱식으로 고칩니다.</p>
+<p>$(x-2)^2+(y+3)^2=3+4+9=16$</p>
+<p><strong>답: 중심 $(2,-3)$, 반지름 $4$</strong></p>`
+        },
+        {
+          q: r`직선 $y=x+k$ 가 원 $x^2+y^2=2$ 에 접할 때 $k$ 의 값을 구하시오.`,
+          a: r`<p>직선 $x-y+k=0$ 과 원점 사이 거리가 반지름 $\sqrt2$ 와 같아야 합니다.</p>
+<p>$\dfrac{|k|}{\sqrt{1+1}}=\sqrt2\ \Rightarrow\ |k|=2$</p>
+<p><strong>답: $k=\pm2$</strong></p>`
+        }
+      ]
+    },
+
+    /* ───────────────────────── 6. 집합과 명제 ───────────────────────── */
+    {
+      id: 'logic', no: 6, part: '공통수학2', title: '집합과 명제',
+      summary: '집합, 명제, 필요충분조건',
+      sections: [
+        {
+          title: '집합의 연산',
+          body: r`
+<ul>
+<li>합집합 $A\cup B$ : A 또는 B에 속하는 원소 전체</li>
+<li>교집합 $A\cap B$ : A와 B에 모두 속하는 원소</li>
+<li>여집합 $A^c$ : 전체집합 $U$ 에서 $A$ 를 뺀 것</li>
+<li>차집합 $A-B$ : A에는 속하고 B에는 속하지 않는 원소</li>
+</ul>
+<div class="formula">
+$$(A\cup B)^c=A^c\cap B^c,\qquad (A\cap B)^c=A^c\cup B^c\quad(\text{드모르간})$$
+$$n(A\cup B)=n(A)+n(B)-n(A\cap B)$$
+</div>`,
+          tip: r`
+<p>식으로 헷갈리면 <strong>벤다이어그램을 그려서 칸마다 숫자를 채우세요.</strong> 가운데(교집합)부터 채우는 것이 요령입니다.</p>
+<p>드모르간은 <strong>"괄호 풀면 $\cup$ 와 $\cap$ 가 서로 뒤집힌다"</strong> 로 기억하세요.</p>`
+        },
+        {
+          title: '부분집합의 개수',
+          body: r`
+<p>원소가 $n$ 개인 집합의 부분집합은 <strong>$2^n$ 개</strong>입니다. (원소마다 "넣는다 / 안 넣는다" 2가지)</p>`,
+          tip: r`
+<p>특정 원소 $k$ 개를 <strong>반드시 포함</strong>하거나 <strong>반드시 제외</strong>하면 그 원소들은 선택권이 없어지므로 <strong>$2^{\,n-k}$ 개</strong>입니다.</p>
+<p>진부분집합은 자기 자신을 뺀 $2^n-1$ 개입니다.</p>`
+        },
+        {
+          title: '명제와 조건',
+          body: r`
+<p>명제 "$p$ 이면 $q$ 이다" ($p\to q$) 는 <strong>진리집합</strong> $P,\ Q$ 로 판정합니다.</p>
+<div class="formula">$$p\to q\ \text{참}\iff P\subset Q$$</div>
+<ul>
+<li>역: $q\to p$,　이: $\sim p\to\sim q$,　<strong>대우: $\sim q\to\sim p$</strong></li>
+<li>명제와 그 <strong>대우의 참·거짓은 항상 같다</strong>.</li>
+<li>$p\to q$ 가 참이면 $p$ 는 $q$ 이기 위한 <strong>충분조건</strong>, $q$ 는 $p$ 이기 위한 <strong>필요조건</strong>.</li>
+</ul>`,
+          tip: r`
+<p><strong>"작은 집합 → 큰 집합"</strong> 이 참입니다. 충분조건이 작은 집합, 필요조건이 큰 집합입니다.</p>
+<p>증명이 막히면 <strong>대우로 바꿔서</strong> 증명해 보세요. 특히 "~이면 ~이다"의 결론이 "~가 아니다" 꼴이면 대우가 훨씬 쉽습니다.</p>
+<p>거짓임을 보이려면 <strong>반례 하나</strong>면 충분합니다.</p>`
+        },
+        {
+          title: '절대부등식과 산술·기하평균',
+          body: r`
+<p>$a>0,\ b>0$ 일 때</p>
+<div class="formula">$$\frac{a+b}{2}\ \ge\ \sqrt{ab}\qquad(\text{등호는 }a=b\text{ 일 때})$$</div>
+<p>덧붙여 $a^2+b^2\ge2ab$ 도 자주 쓰입니다.</p>`,
+          tip: r`
+<p>최솟값 문제는 <strong>"곱이 상수가 되도록 짝을 짓는다"</strong> 가 비결입니다.</p>
+<p>$x>0$ 일 때 $x+\dfrac4x\ge2\sqrt{x\cdot\dfrac4x}=2\cdot2=4$ (등호는 $x=\dfrac4x$, 즉 $x=2$)</p>
+<p>풀이 끝에 <strong>등호가 성립하는 값이 실제로 가능한지</strong> 꼭 확인하세요. 안 되면 최솟값이 아닙니다.</p>`
+        }
+      ],
+      examples: [
+        {
+          q: r`집합 $\{1,2,3,4,5\}$ 의 부분집합 중 $1,2$ 를 반드시 포함하는 것의 개수를 구하시오.`,
+          a: r`<p>$1,2$ 는 이미 포함되므로 나머지 $3$ 개 원소만 선택합니다.</p>
+<p>$2^{5-2}=2^3=8$</p><p><strong>답: 8</strong></p>`
+        },
+        {
+          q: r`$x>0$ 일 때 $x+\dfrac{4}{x}$ 의 최솟값과, 그때의 $x$ 의 값을 구하시오.`,
+          a: r`<p>산술·기하평균 부등식에서 $x+\dfrac4x\ge2\sqrt{x\cdot\dfrac4x}=4$</p>
+<p>등호는 $x=\dfrac4x$ 일 때, $x^2=4$ 이므로 $x=2$ ($x>0$)</p>
+<p><strong>답: 최솟값 4 ($x=2$ 일 때)</strong></p>`
+        },
+        {
+          q: r`$n(A)=12,\ n(B)=9,\ n(A\cap B)=4$ 일 때 $n(A\cup B)$ 를 구하시오.`,
+          a: r`<p>$n(A\cup B)=12+9-4=17$</p><p><strong>답: 17</strong></p>`
+        }
+      ]
+    },
+
+    /* ───────────────────────── 7. 함수와 그래프 ───────────────────────── */
+    {
+      id: 'function', no: 7, part: '공통수학2', title: '함수와 그래프',
+      summary: '합성함수, 역함수, 유리함수, 무리함수',
+      sections: [
+        {
+          title: '함수의 기본',
+          body: r`
+<p>함수 $f:X\to Y$ 는 $X$ 의 모든 원소에 $Y$ 의 원소가 <strong>단 하나씩</strong> 대응하는 관계입니다.</p>
+<ul>
+<li>정의역 $X$, 공역 $Y$, 치역 $\{f(x)\mid x\in X\}$</li>
+<li><strong>일대일함수</strong>: 서로 다른 $x$ 가 서로 다른 $y$ 에 대응</li>
+<li><strong>일대일대응</strong>: 일대일함수이면서 (치역 = 공역)</li>
+</ul>`,
+          tip: r`<p>그래프에서 <strong>$x$ 축과 평행한 직선을 그었을 때 두 점 이상에서 만나면 일대일이 아닙니다.</strong> 이 한 줄로 판별이 끝납니다.</p>`
+        },
+        {
+          title: '합성함수와 역함수',
+          body: r`
+<div class="formula">
+$$(g\circ f)(x)=g\big(f(x)\big)\quad(\text{안쪽 }f\text{ 부터 계산})$$
+$$f(a)=b\iff f^{-1}(b)=a$$
+</div>
+<p>역함수의 그래프는 원래 함수의 그래프와 <strong>직선 $y=x$ 에 대하여 대칭</strong>입니다. 역함수는 <strong>일대일대응</strong>일 때만 존재합니다.</p>`,
+          tip: r`
+<p><strong>역함수 구하는 3단계</strong></p>
+<ol>
+<li>$y=f(x)$ 에서 $x$ 를 $y$ 로 풀어 $x=\ldots$ 꼴로 만들기</li>
+<li>$x$ 와 $y$ 를 서로 바꿔 쓰기</li>
+<li>정의역·치역 확인</li>
+</ol>
+<p><strong>$f^{-1}(b)$ 의 값</strong>은 역함수를 구하지 말고 <strong>$f(x)=b$ 를 풀어서</strong> 나온 $x$ 가 답입니다. 훨씬 빠릅니다.</p>
+<p>$(g\circ f)^{-1}=f^{-1}\circ g^{-1}$ (순서가 뒤집힘)</p>`
+        },
+        {
+          title: '유리함수',
+          body: r`
+<p>$y=\dfrac{k}{x-p}+q$ 꼴이 <strong>표준형</strong>이며, 그래프는 $y=\dfrac kx$ 를 평행이동한 것입니다.</p>
+<ul>
+<li>점근선: $x=p,\ y=q$</li>
+<li>$k>0$ 이면 1, 3사분면 방향 / $k<0$ 이면 2, 4사분면 방향</li>
+<li>정의역 $\{x\mid x\ne p\}$, 치역 $\{y\mid y\ne q\}$</li>
+</ul>`,
+          tip: r`
+<p>$y=\dfrac{ax+b}{cx+d}$ 는 <strong>분자를 분모로 나눠서</strong> 표준형으로 바꾸세요.</p>
+<p>$\dfrac{2x+1}{x-1}=\dfrac{2(x-1)+3}{x-1}=2+\dfrac{3}{x-1}$ → 점근선 $x=1,\ y=2$</p>
+<p>점근선의 교점 $(p,q)$ 가 그래프의 <strong>대칭 중심</strong>입니다.</p>`
+        },
+        {
+          title: '무리함수',
+          body: r`
+<p>$y=\sqrt{a(x-p)}+q$ 꼴이며 $y=\sqrt{ax}$ 를 평행이동한 그래프입니다.</p>
+<ul>
+<li>시작점(꼭짓점): $(p,q)$</li>
+<li>$a>0$ 이면 오른쪽, $a<0$ 이면 왼쪽으로 뻗는다</li>
+<li>근호 안이 0 이상이어야 하므로 정의역에 제한이 생긴다</li>
+</ul>`,
+          tip: r`
+<p>무리함수는 <strong>"시작점 → 방향 → 한 점"</strong> 3가지만 잡으면 그래프가 그려집니다.</p>
+<p>방정식 $\sqrt{x+2}=x$ 처럼 <strong>양변을 제곱해서 푼 뒤에는 반드시 검산</strong>해야 합니다. 제곱하는 순간 가짜 해가 생길 수 있습니다. (조건: $x\ge0$)</p>`
+        }
+      ],
+      examples: [
+        {
+          q: r`$f(x)=2x+1,\ g(x)=x^2$ 일 때 $(g\circ f)(2)$ 와 $(f\circ g)(2)$ 를 구하시오.`,
+          a: r`<p>$(g\circ f)(2)=g(f(2))=g(5)=25$</p>
+<p>$(f\circ g)(2)=f(g(2))=f(4)=9$</p>
+<p><strong>답: 25, 9</strong> (합성 순서에 따라 값이 다릅니다)</p>`
+        },
+        {
+          q: r`$f(x)=3x-5$ 일 때 $f^{-1}(7)$ 의 값을 구하시오.`,
+          a: r`<p>역함수를 구하지 않고 $f(x)=7$ 을 풉니다.</p>
+<p>$3x-5=7\ \Rightarrow\ x=4$</p><p><strong>답: 4</strong></p>`
+        },
+        {
+          q: r`$y=\dfrac{2x+1}{x-1}$ 의 점근선의 방정식을 구하시오.`,
+          a: r`<p>$y=\dfrac{2(x-1)+3}{x-1}=\dfrac{3}{x-1}+2$</p>
+<p><strong>답: $x=1,\ y=2$</strong></p>`
+        }
+      ]
+    }
+  ]
+};
