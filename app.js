@@ -13,8 +13,12 @@ const MATH_GRADES = [
   { group: '고등학교', items: ['고1', '고2', '고3'].map((n, i) => ({ id: 'h' + (i + 1), name: n })) },
 ];
 
-// 지금 콘텐츠가 있는 학년
-const READY_GRADES = { h1: window.MATH_HIGH1 };
+// 지금 콘텐츠가 있는 학년 (화면을 그릴 때마다 확인해서, 로딩 순서와 상관없이 동작)
+function readyGrades() {
+  const g = {};
+  if (window.MATH_HIGH1) g.h1 = window.MATH_HIGH1;
+  return g;
+}
 
 const app = document.getElementById('app');
 const crumbs = document.getElementById('crumbs');
@@ -57,13 +61,23 @@ function viewSubjects() {
 
 function viewGrades() {
   setCrumbs([{ label: '과목', href: '#/' }, { label: '수학' }]);
+  const ready = readyGrades();
+
+  const warning = ready.h1 ? '' : `
+    <div class="tip" style="margin:0 0 24px">
+      <strong class="label">고1 데이터를 불러오지 못했어요</strong>
+      <p><code>data-math-high1.js</code> 파일이 <code>index.html</code> 과 같은 폴더에 같은 이름으로 올라가 있는지 확인해 주세요.
+      (파일 이름 앞에 숫자·문자가 붙어 있으면 이름을 고쳐야 합니다.) 확인 후 <b>Ctrl+Shift+R</b> (모바일은 새로고침)로 다시 불러오세요.</p>
+    </div>`;
+
   app.innerHTML = `
     <h1>수학</h1>
     <p class="lead">학년을 선택하세요.</p>
+    ${warning}
     ${MATH_GRADES.map(g => `
       <div class="group-title">${g.group}</div>
       <div class="grid">
-        ${g.items.map(it => READY_GRADES[it.id]
+        ${g.items.map(it => ready[it.id]
           ? `<a class="choice" href="#/math/${it.id}"><div class="name">${it.name}</div></a>`
           : `<div class="choice disabled"><div class="name">${it.name}</div><span class="badge">준비 중</span></div>`
         ).join('')}
@@ -71,7 +85,7 @@ function viewGrades() {
 }
 
 function viewUnits(gradeId) {
-  const data = READY_GRADES[gradeId];
+  const data = readyGrades()[gradeId];
   if (!data) return go('#/math');
   setCrumbs([{ label: '과목', href: '#/' }, { label: '수학', href: '#/math' }, { label: data.gradeName }]);
 
@@ -92,7 +106,7 @@ function viewUnits(gradeId) {
 }
 
 function viewUnit(gradeId, unitId) {
-  const data = READY_GRADES[gradeId];
+  const data = readyGrades()[gradeId];
   const unit = data && data.units.find(u => u.id === unitId);
   if (!unit) return go('#/math');
   setCrumbs([
