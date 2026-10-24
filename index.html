@@ -209,6 +209,20 @@ details.example .hint { color: var(--sub); font-size: 13px; margin-top: 6px; fon
 .more-row { margin-top: 16px; text-align: center; }
 .done-msg { margin-top: 16px; padding: 14px; text-align: center; background: var(--tip); border-radius: 10px; color: var(--text); }
 .done-msg button { margin-top: 8px; }
+
+/* 시험지 */
+a.practice-btn { text-decoration: none; }
+a.chip { text-decoration: none; display: inline-block; }
+.paper { background: #fff; border: 1px solid #d9dde3; border-radius: 6px; padding: 32px 36px 28px; box-shadow: 0 2px 10px rgba(20,30,50,.06); }
+.paper-head { text-align: center; border-bottom: 2px solid var(--text); padding-bottom: 14px; margin-bottom: 8px; }
+.paper-title { font-size: 22px; font-weight: 800; }
+.paper-sub { color: var(--sub); font-size: 14px; margin-top: 2px; }
+.paper-meta { display: flex; justify-content: space-between; margin-top: 14px; font-size: 14px; color: var(--sub); }
+.paper .prob { border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 22px 0 18px; margin-top: 0; }
+.paper .prob:last-of-type { border-bottom: 0; }
+.paper .prob .pn { font-size: 18px; }
+.paper .prob .pt { font-size: 16.5px; }
+@media (max-width: 560px) { .paper { padding: 20px 14px; } }
   </style>
 </head>
 <body>
@@ -935,19 +949,29 @@ window.makePool = function (unitId, si, level, n) {
   const P0 = {
     1: [
       () => {
-        const B = pick([100, 1000]), k = R(1, 9), g = pick([1, -1]), n = B + g * k, s = g > 0 ? '+' : '-';
-        return { q: r`$${n}^2$ 을 곱셈공식을 이용하여 계산하시오.`,
-          a: sol([r`$${n}^2=(${B}${s}${k})^2=${B}^2${s}2\cdot${B}\cdot${k}+${k}^2=${B * B}${s}${2 * B * k}+${k * k}$`], n * n) };
-      },
-      () => {
         const a = R(1, 9), g = pick([1, -1]);
         return { q: r`$(${lin(1, g * a)})^2$ 을 전개하시오.`,
           a: sol([r`$(a${g > 0 ? '+' : '-'}b)^2=a^2${g > 0 ? '+' : '-'}2ab+b^2$ 에 $a=x,\ b=${a}$ 를 대입합니다.`], poly([1, 2 * g * a, a * a])) };
       },
       () => {
-        const B = pick([100, 1000]), k = R(1, 9), x = B - k, y = B + k;
-        return { q: r`$${x}\times${y}$ 을 곱셈공식을 이용하여 계산하시오.`,
-          a: sol([r`$${x}\times${y}=(${B}-${k})(${B}+${k})=${B}^2-${k}^2=${B * B}-${k * k}$`], B * B - k * k) };
+        const a = R(2, 12);
+        return { q: r`$(x+${a})(x-${a})$ 을 전개하시오.`,
+          a: sol([r`$(a+b)(a-b)=a^2-b^2$ 에 $a=x,\ b=${a}$ 를 대입합니다.`], poly([1, 0, -a * a])) };
+      },
+      () => {
+        const p = R(2, 4), q = nz(-6, 6);
+        return { q: r`$(${lin(p, q)})^2$ 을 전개하시오.`,
+          a: sol([r`$(a${q > 0 ? '+' : '-'}b)^2=a^2${q > 0 ? '+' : '-'}2ab+b^2$ 에 $a=${p}x,\ b=${abs(q)}$ 를 대입합니다.`], poly([p * p, 2 * p * q, q * q])) };
+      },
+      () => {
+        const [a, b] = distinct(-7, 7, 2, true);
+        return { q: r`$(${lin(1, a)})(${lin(1, b)})$ 을 전개하시오.`,
+          a: sol([r`$(x+a)(x+b)=x^2+(a+b)x+ab$ 에 $a=${a},\ b=${b}$ 를 대입합니다.`], poly([1, a + b, a * b])) };
+      },
+      () => {
+        const p = R(2, 5), q = R(1, 6);
+        return { q: r`$(${lin(p, q)})(${lin(p, -q)})$ 을 전개하시오.`,
+          a: sol([r`$(a+b)(a-b)=a^2-b^2$ 에 $a=${p}x,\ b=${q}$ 를 대입합니다.`], poly([p * p, 0, -q * q])) };
       }
     ],
     2: [
@@ -2478,7 +2502,7 @@ window.makePool = function (unitId, si, level, n) {
           <h2>${s.title}</h2>
           ${s.body}
           ${s.tip ? `<div class="tip"><strong class="label">꿀팁</strong>${s.tip}</div>` : ''}
-          ${hasGen(i) ? `<button class="practice-btn" type="button">✏️ 문제 풀기</button><div class="practice" hidden></div>` : ''}
+          ${hasGen(i) ? `<a class="practice-btn" href="#/math/${gradeId}/${unit.id}/practice/${i}/0">✏️ 문제 풀기</a>` : ''}
         </section>`).join('')}
       <div class="section-label" id="ex">예제로 확인하기</div>
       ${unit.examples.map(e => `
@@ -2492,70 +2516,58 @@ window.makePool = function (unitId, si, level, n) {
       ev.preventDefault();
       document.getElementById(a.dataset.jump).scrollIntoView({ behavior: 'smooth', block: 'start' });
     }));
-
-    app.querySelectorAll('section.card[data-si]').forEach(sec => {
-      const btn = sec.querySelector('.practice-btn');
-      if (btn) setupPractice(sec, unit.id, +sec.dataset.si, btn);
-    });
   }
 
-  /* ---------- 문제 풀기 ---------- */
-  function setupPractice(sec, unitId, si, btn) {
-    const box = sec.querySelector('.practice');
-    const st = { level: null, pool: [], shown: 0 };
-
-    box.innerHTML = `
-      <div class="levels"><span class="lv-label">난이도</span>
-        ${LEVELS.map((l, i) => `<button type="button" class="chip" data-lv="${i}">${l}</button>`).join('')}
+  /* ---------- 시험지 ---------- */
+  function viewPractice(gradeId, unitId, si, level) {
+    const data = readyGrades()[gradeId];
+    const unit = data && data.units.find(u => u.id === unitId);
+    const sec = unit && unit.sections[si];
+    if (!sec || !(window.GEN[unitId] && window.GEN[unitId][si])) return go('#/math');
+    level = Math.min(2, Math.max(0, level | 0));
+    setCrumbs([
+      { label: '과목', href: '#/' }, { label: '수학', href: '#/math' },
+      { label: data.gradeName, href: `#/math/${gradeId}` },
+      { label: unit.title, href: `#/math/${gradeId}/${unitId}` }, { label: '문제 풀기' },
+    ]);
+    const pool = window.makePool(unitId, si, level + 1, TOTAL);
+    const base = `#/math/${gradeId}/${unitId}/practice/${si}`;
+    app.innerHTML = fix(`
+      <a class="back" href="#/math/${gradeId}/${unitId}">← 개념으로 돌아가기</a>
+      <div class="levels" style="margin-bottom:14px"><span class="lv-label">난이도</span>
+        ${LEVELS.map((l, i) => `<a class="chip${i === level ? ' on' : ''}" href="${base}/${i}">${l}</a>`).join('')}
       </div>
-      <div class="list"></div>`;
-    const list = box.querySelector('.list');
-
-    btn.addEventListener('click', () => {
-      box.hidden = !box.hidden;
-      btn.textContent = box.hidden ? '✏️ 문제 풀기' : '문제 접기';
-      btn.classList.toggle('ghost', !box.hidden);
-    });
-
-    box.querySelectorAll('.chip').forEach(ch => ch.addEventListener('click', () => {
-      st.level = +ch.dataset.lv;
-      box.querySelectorAll('.chip').forEach(c => c.classList.toggle('on', c === ch));
-      st.pool = window.makePool(unitId, si, st.level + 1, TOTAL);
-      st.shown = 0;
-      list.innerHTML = '';
-      showMore();
-    }));
+      <article class="paper">
+        <header class="paper-head">
+          <div class="paper-title">${unit.title}</div>
+          <div class="paper-sub">${sec.title} · ${LEVELS[level]}</div>
+          <div class="paper-meta"><span>이름 ________</span><span>점수 ____ / ${pool.length}</span></div>
+        </header>
+        <div class="list"></div>
+      </article>`);
+    const list = app.querySelector('.list');
+    let shown = 0;
 
     function showMore() {
-      list.querySelectorAll('.more-row, .done-msg, .progress').forEach(n => n.remove());
-      const from = st.shown, to = Math.min(st.shown + STEP, st.pool.length);
+      list.querySelectorAll('.more-row, .done-msg').forEach(n => n.remove());
+      const to = Math.min(shown + STEP, pool.length);
       const frag = document.createDocumentFragment();
-      for (let i = from; i < to; i++) frag.appendChild(makeProblem(st.pool[i], i + 1));
+      for (let i = shown; i < to; i++) frag.appendChild(makeProblem(pool[i], i + 1));
       list.appendChild(frag);
-      st.shown = to;
-
-      const info = document.createElement('div');
-      info.className = 'progress';
-      info.textContent = `${LEVELS[st.level]} · ${st.shown} / ${st.pool.length} 문제`;
-      list.insertBefore(info, list.firstChild);
-
-      if (st.shown < st.pool.length) {
-        const row = document.createElement('div');
+      shown = to;
+      const row = document.createElement('div');
+      if (shown < pool.length) {
         row.className = 'more-row';
-        row.innerHTML = `<button type="button" class="practice-btn">더 풀기 (+${Math.min(STEP, st.pool.length - st.shown)}문제)</button>`;
+        row.innerHTML = `<button type="button" class="practice-btn">더 풀기 (${shown} / ${pool.length})</button>`;
         row.querySelector('button').addEventListener('click', showMore);
-        list.appendChild(row);
       } else {
-        const d = document.createElement('div');
-        d.className = 'done-msg';
-        d.innerHTML = `🎉 ${LEVELS[st.level]} 문제를 모두 풀었어요!<br>다른 난이도를 골라 보세요.<br><button type="button" class="practice-btn ghost">같은 난이도 새 문제 20개</button>`;
-        d.querySelector('button').addEventListener('click', () => {
-          box.querySelector(`.chip[data-lv="${st.level}"]`).click();
-        });
-        list.appendChild(d);
+        row.className = 'done-msg';
+        row.innerHTML = `🎉 ${LEVELS[level]} ${pool.length}문제를 모두 풀었어요!<br><a class="practice-btn ghost" href="${base}/${level}" onclick="setTimeout(function(){window.dispatchEvent(new HashChangeEvent('hashchange'))},0)">새 문제로 다시 풀기</a>`;
       }
+      list.appendChild(row);
       typeset(list);
     }
+    showMore();
   }
 
   function makeProblem(p, n) {
@@ -2669,6 +2681,7 @@ window.makePool = function (unitId, si, level, n) {
     if (parts.length === 0) viewSubjects();
     else if (parts[0] === 'math' && parts.length === 1) viewGrades();
     else if (parts[0] === 'math' && parts.length === 2) viewUnits(parts[1]);
+    else if (parts[0] === 'math' && parts[3] === 'practice') viewPractice(parts[1], parts[2], +parts[4], +parts[5] || 0);
     else if (parts[0] === 'math' && parts.length >= 3) viewUnit(parts[1], parts[2]);
     else viewSubjects();
     window.scrollTo(0, 0);
