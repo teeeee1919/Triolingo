@@ -164,6 +164,51 @@ details.example .hint { color: var(--sub); font-size: 13px; margin-top: 6px; fon
   .topbar { padding: 12px 16px; gap: 12px; }
 }
 
+/* ---------- 문제 풀기 ---------- */
+.practice-btn {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 16px;
+  padding: 10px 18px; border: 1px solid var(--accent); border-radius: 999px;
+  background: var(--accent); color: #fff; font: inherit; font-weight: 600; font-size: 15px; cursor: pointer;
+}
+.practice-btn:hover { filter: brightness(1.08); }
+.practice-btn.ghost { background: #fff; color: var(--accent); }
+.practice { margin-top: 18px; padding-top: 18px; border-top: 1px dashed var(--line); }
+.practice[hidden] { display: none; }
+.levels { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 4px; }
+.levels .lv-label { font-size: 14px; color: var(--sub); margin-right: 4px; }
+.chip {
+  padding: 7px 16px; border: 1px solid var(--line); border-radius: 999px; background: #fff;
+  font: inherit; font-size: 14px; cursor: pointer; color: var(--text);
+}
+.chip:hover { border-color: var(--accent); color: var(--accent); }
+.chip.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 700; }
+.progress { font-size: 13px; color: var(--sub); margin: 10px 0 4px; }
+.prob { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin-top: 12px; }
+.prob .pq { display: flex; gap: 10px; }
+.prob .pn { flex: none; color: var(--accent); font-weight: 700; min-width: 26px; }
+.prob .pt { flex: 1; min-width: 0; overflow-x: auto; }
+.tools { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.tool {
+  padding: 5px 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff;
+  font: inherit; font-size: 13px; cursor: pointer; color: var(--text);
+}
+.tool:hover { border-color: var(--accent); }
+.tool.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.tool.solbtn { margin-left: auto; color: var(--accent); border-color: var(--accent); }
+.work {
+  position: relative; margin-top: 8px; height: 160px; border: 1px dashed #cbd5e1; border-radius: 10px;
+  background: repeating-linear-gradient(transparent, transparent 31px, #eef2f7 32px);
+  overflow: hidden;
+}
+.work canvas.ink { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; touch-action: auto; }
+.work.pen canvas.ink { pointer-events: auto; touch-action: none; cursor: crosshair; }
+.work .ph { position: absolute; left: 12px; top: 8px; font-size: 12px; color: #a0aec0; pointer-events: none; }
+.sol { margin-top: 12px; padding: 12px 16px; background: var(--accent-soft); border-radius: 10px; }
+.sol[hidden] { display: none; }
+.sol p { margin: 4px 0; }
+.more-row { margin-top: 16px; text-align: center; }
+.done-msg { margin-top: 16px; padding: 14px; text-align: center; background: var(--tip); border-radius: 10px; color: var(--text); }
+.done-msg button { margin-top: 8px; }
   </style>
 </head>
 <body>
@@ -171,11 +216,8 @@ details.example .hint { color: var(--sub); font-size: 13px; margin-top: 6px; fon
     <a href="#/" class="brand">쉬운 수학 학습</a>
     <nav id="crumbs" class="crumbs" aria-label="현재 위치"></nav>
   </header>
-
   <main id="app" class="container"></main>
-
   <footer class="footer">개념은 쉽게, 계산은 빠르게.</footer>
-
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
   <script>
@@ -719,180 +761,1924 @@ $$f(a)=b\iff f^{-1}(b)=a$$
 
   </script>
   <script>
-/* 쉬운 수학 학습 - 해시 라우팅 방식 (GitHub Pages에서 그대로 동작) */
+/* 문제 생성기 공통 도구 */
+window.GEN = window.GEN || {};
+window.H = (function () {
+  const r = String.raw;
+  const R = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  const nz = (a, b) => { let v; do { v = R(a, b); } while (v === 0); return v; };
+  const abs = Math.abs;
+  const gcd = (a, b) => { a = abs(a); b = abs(b); while (b) { const t = a % b; a = b; b = t; } return a; };
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = R(0, i); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const distinct = (lo, hi, n, excl0) => {
+    const pool = [];
+    for (let v = lo; v <= hi; v++) { if (excl0 && v === 0) continue; pool.push(v); }
+    return shuffle(pool).slice(0, n);
+  };
 
-const SUBJECTS = [
-  { id: 'math', name: '수학', desc: '개념과 계산 꿀팁', ready: true },
-  { id: 'korean', name: '국어', desc: '', ready: false },
-  { id: 'english', name: '영어', desc: '', ready: false },
-  { id: 'science', name: '과학', desc: '', ready: false },
-];
+  /* 분수 */
+  const F = (n, d = 1) => { if (d < 0) { n = -n; d = -d; } const g = gcd(n, d) || 1; return { n: n / g, d: d / g }; };
+  const fadd = (a, b) => F(a.n * b.d + b.n * a.d, a.d * b.d);
+  const fsub = (a, b) => F(a.n * b.d - b.n * a.d, a.d * b.d);
+  const fmul = (a, b) => F(a.n * b.n, a.d * b.d);
+  const fdiv = (a, b) => F(a.n * b.d, a.d * b.n);
+  const ftex = f => f.d === 1 ? `${f.n}` : (f.n < 0 ? `-\\frac{${-f.n}}{${f.d}}` : `\\frac{${f.n}}{${f.d}}`);
 
-const MATH_GRADES = [
-  { group: '초등학교', items: ['초1', '초2', '초3', '초4', '초5', '초6'].map((n, i) => ({ id: 'e' + (i + 1), name: n })) },
-  { group: '중학교', items: ['중1', '중2', '중3'].map((n, i) => ({ id: 'm' + (i + 1), name: n })) },
-  { group: '고등학교', items: ['고1', '고2', '고3'].map((n, i) => ({ id: 'h' + (i + 1), name: n })) },
-];
-
-// 지금 콘텐츠가 있는 학년 (화면을 그릴 때마다 확인해서, 로딩 순서와 상관없이 동작)
-function readyGrades() {
-  const g = {};
-  if (window.MATH_HIGH1) g.h1 = window.MATH_HIGH1;
-  return g;
-}
-
-const app = document.getElementById('app');
-const crumbs = document.getElementById('crumbs');
-
-function setCrumbs(list) {
-  crumbs.innerHTML = list
-    .map((c, i) => {
-      const sep = i > 0 ? '<span class="sep">/</span>' : '';
-      return sep + (c.href ? `<a href="${c.href}">${c.label}</a>` : `<span>${c.label}</span>`);
-    })
-    .join('');
-}
-
-function typeset() {
-  if (window.renderMathInElement) {
-    window.renderMathInElement(app, {
-      delimiters: [
-        { left: '$$', right: '$$', display: true },
-        { left: '$', right: '$', display: false },
-      ],
-      throwOnError: false,
+  /* 식 만들기 */
+  const expr = list => {
+    let s = '';
+    for (const [c, m] of list) {
+      if (c === 0) continue;
+      const sg = c < 0 ? '-' : (s ? '+' : '');
+      const a = abs(c);
+      s += sg + ((a === 1 && m) ? '' : a) + m;
+    }
+    return s || '0';
+  };
+  const pw = (v, p) => p === 0 ? '' : p === 1 ? v : `${v}^{${p}}`;
+  const poly = (c, v = 'x') => expr(c.map((a, i) => [a, pw(v, c.length - 1 - i)]));
+  const lin = (a, b, v = 'x') => poly([a, b], v);
+  const par = n => n < 0 ? `(${n})` : `${n}`;
+  const sg = n => n < 0 ? `-${-n}` : `+${n}`;
+  const cat = (a, b) => b === '0' ? a : (b[0] === '-' ? a + b : a + '+' + b);
+  const fac = (v, rt) => rt === 0 ? v : rt > 0 ? `(${v}-${rt})` : `(${v}+${-rt})`;
+  const facs = (roots, v = 'x') => {
+    const m = {};
+    roots.forEach(x => m[x] = (m[x] || 0) + 1);
+    return Object.keys(m).map(Number).sort((a, b) => a - b)
+      .map(x => fac(v, x) + (m[x] > 1 ? `^{${m[x]}}` : '')).join('');
+  };
+  const pmul = (a, b) => { const o = Array(a.length + b.length - 1).fill(0); a.forEach((x, i) => b.forEach((y, j) => o[i + j] += x * y)); return o; };
+  const fromRoots = rs => rs.reduce((p, x) => pmul(p, [1, -x]), [1]);
+  const ev = (c, x) => c.reduce((s, a) => s * x + a, 0);
+  const evF = (c, x) => c.reduce((s, a) => fadd(fmul(s, x), F(a)), F(0));
+  const synth = (c, k) => { const o = [c[0]]; for (let i = 1; i < c.length; i++) o.push(c[i] + k * o[i - 1]); return o; };
+  const subst = (c, k) => {
+    const n = c.length - 1; let s = '';
+    c.forEach((a, i) => {
+      const p = n - i; if (a === 0) return;
+      const sign = a < 0 ? '-' : (s ? '+' : '');
+      const m = abs(a); const kk = k < 0 ? `(${k})` : `${k}`;
+      let body;
+      if (p === 0) body = `${m}`;
+      else { const q = p === 1 ? kk : `${kk}^{${p}}`; body = (m === 1 ? '' : `${m}\\cdot `) + q; }
+      s += sign + body;
     });
+    return s;
+  };
+
+  /* 제곱근 */
+  const sq = n => { let k = 1; for (let i = 2; i * i <= n; i++) { while (n % (i * i) === 0) { n /= i * i; k *= i; } } return { k, m: n }; };
+  const isSq = n => n >= 0 && Number.isInteger(Math.sqrt(n));
+  const sqT = n => { const { k, m } = sq(n); return m === 1 ? `${k}` : k === 1 ? `\\sqrt{${m}}` : `${k}\\sqrt{${m}}`; };
+
+  /* 정답·풀이 */
+  const sol = (steps, ans, raw) => steps.map(s => `<p>${s}</p>`).join('') + `<p><strong>답: ${raw ? ans : '$' + ans + '$'}</strong></p>`;
+
+  /* 복소수 */
+  const cx = (a, b) => expr([[a, ''], [b, 'i']]);
+  const cxF = (re, im) => {
+    let s = '';
+    if (re.n !== 0) s += ftex(re);
+    if (im.n !== 0) {
+      const neg = im.n < 0; const a = F(abs(im.n), im.d);
+      const c = (a.n === 1 && a.d === 1) ? '' : ftex(a);
+      s += (neg ? '-' : (s ? '+' : '')) + c + 'i';
+    }
+    return s || '0';
+  };
+
+  /* 이차방정식 풀이 (a>0) */
+  const quadSol = (a, b, c) => {
+    const D = b * b - 4 * a * c;
+    if (D === 0) return { D, t: `x=${ftex(F(-b, 2 * a))}` };
+    if (D > 0 && isSq(D)) {
+      const s = Math.sqrt(D);
+      return { D, t: `x=${ftex(F(-b - s, 2 * a))}\\text{ 또는 }x=${ftex(F(-b + s, 2 * a))}` };
+    }
+    const { k, m } = sq(abs(D));
+    const g = gcd(gcd(b, k), 2 * a);
+    const bb = -b / g, kk = k / g, dd = 2 * a / g;
+    let rad;
+    if (D > 0) rad = kk === 1 ? `\\sqrt{${m}}` : `${kk}\\sqrt{${m}}`;
+    else if (m === 1) rad = kk === 1 ? 'i' : `${kk}i`;
+    else rad = (kk === 1 ? '' : `${kk}`) + `\\sqrt{${m}}\\,i`;
+    const numer = (bb === 0 ? '' : `${bb}`) + `\\pm ${rad}`;
+    return { D, t: dd === 1 ? `x=${numer}` : `x=\\frac{${numer}}{${dd}}` };
+  };
+
+  /* 행렬 */
+  const mat = M => `\\begin{pmatrix}${M.map(row => row.join('&')).join('\\\\')}\\end{pmatrix}`;
+  const mmul = (A, B) => A.map(row => B[0].map((_, j) => row.reduce((s, x, k) => s + x * B[k][j], 0)));
+  const madd = (A, B, s = 1) => A.map((row, i) => row.map((x, j) => x + s * B[i][j]));
+  const mscl = (A, k) => A.map(row => row.map(x => x * k));
+  const rndM = (n, m, lo, hi) => Array.from({ length: n }, () => Array.from({ length: m }, () => R(lo, hi)));
+
+  /* 집합 */
+  const setT = a => a.length ? `\\{${a.join(', ')}\\}` : `\\varnothing`;
+  const subset = (U, k) => shuffle(U).slice(0, k).sort((a, b) => a - b);
+
+  /* 경우의 수 */
+  const fact = n => n <= 1 ? 1 : n * fact(n - 1);
+  const P = (n, k) => { let s = 1; for (let i = 0; i < k; i++) s *= n - i; return s; };
+  const C = (n, k) => { if (k < 0 || k > n) return 0; k = Math.min(k, n - k); let s = 1; for (let i = 1; i <= k; i++) s = s * (n - k + i) / i; return Math.round(s); };
+
+  /* y = mx + b (분수 계수) */
+  const lineY = (m, b) => {
+    let s = 'y='; let first = true;
+    if (m.n !== 0) {
+      const a = F(abs(m.n), m.d);
+      s += (m.n < 0 ? '-' : '') + ((a.n === 1 && a.d === 1) ? '' : ftex(a)) + 'x'; first = false;
+    }
+    if (b.n !== 0) {
+      const a = F(abs(b.n), b.d);
+      s += (b.n < 0 ? '-' : (first ? '' : '+')) + ftex(a); first = false;
+    }
+    if (first) s += '0';
+    return s;
+  };
+
+  /* 수식($...$) 안의 < > 가 HTML 태그로 해석되지 않도록 \lt \gt 로 바꿈 */
+  const fixMath = html => html.replace(/\$\$[\s\S]+?\$\$|\$[^$]+\$/g, m => m.replace(/</g, '\\lt ').replace(/>/g, '\\gt '));
+
+  return { fixMath, r, R, pick, nz, abs, gcd, shuffle, distinct, F, fadd, fsub, fmul, fdiv, ftex, expr, pw, poly, lin, par, sg, cat, fac, facs, pmul, fromRoots, ev, evF, synth, subst, sq, isSq, sqT, sol, cx, cxF, quadSol, mat, mmul, madd, mscl, rndM, setT, subset, fact, P, C, lineY };
+})();
+
+/* 개념·난이도별 문제 묶음 만들기 (서로 다른 문제만, 유형을 고르게 섞음) */
+window.makePool = function (unitId, si, level, n) {
+  const H = window.H;
+  const fns = (window.GEN[unitId] && window.GEN[unitId][si] && window.GEN[unitId][si][level]) || [];
+  const out = [], seen = new Set();
+  let queue = [], tries = 0;
+  while (fns.length && out.length < n && tries < 800) {
+    tries++;
+    if (!queue.length) queue = H.shuffle(fns.map((_, i) => i));
+    let p;
+    try { p = fns[queue.pop()](); } catch (e) { continue; }
+    if (!p || seen.has(p.q)) continue;
+    seen.add(p.q);
+    out.push({ q: H.fixMath(p.q), a: H.fixMath(p.a) });
   }
-}
-
-/* ---------- 화면 ---------- */
-
-function viewSubjects() {
-  setCrumbs([]);
-  app.innerHTML = `
-    <h1>무엇을 공부할까요?</h1>
-    <p class="lead">과목을 선택하세요.</p>
-    <div class="grid">
-      ${SUBJECTS.map(s => s.ready
-        ? `<a class="choice" href="#/${s.id}"><div class="name">${s.name}</div><div class="meta">${s.desc}</div></a>`
-        : `<div class="choice disabled"><div class="name">${s.name}</div><span class="badge">준비 중</span></div>`
-      ).join('')}
-    </div>`;
-}
-
-function viewGrades() {
-  setCrumbs([{ label: '과목', href: '#/' }, { label: '수학' }]);
-  const ready = readyGrades();
-
-  const warning = ready.h1 ? '' : `
-    <div class="tip" style="margin:0 0 24px">
-      <strong class="label">고1 데이터를 불러오지 못했어요</strong>
-      <p><code>data-math-high1.js</code> 파일이 <code>index.html</code> 과 같은 폴더에 같은 이름으로 올라가 있는지 확인해 주세요.
-      (파일 이름 앞에 숫자·문자가 붙어 있으면 이름을 고쳐야 합니다.) 확인 후 <b>Ctrl+Shift+R</b> (모바일은 새로고침)로 다시 불러오세요.</p>
-    </div>`;
-
-  app.innerHTML = `
-    <h1>수학</h1>
-    <p class="lead">학년을 선택하세요.</p>
-    ${warning}
-    ${MATH_GRADES.map(g => `
-      <div class="group-title">${g.group}</div>
-      <div class="grid">
-        ${g.items.map(it => ready[it.id]
-          ? `<a class="choice" href="#/math/${it.id}"><div class="name">${it.name}</div></a>`
-          : `<div class="choice disabled"><div class="name">${it.name}</div><span class="badge">준비 중</span></div>`
-        ).join('')}
-      </div>`).join('')}`;
-}
-
-function viewUnits(gradeId) {
-  const data = readyGrades()[gradeId];
-  if (!data) return go('#/math');
-  setCrumbs([{ label: '과목', href: '#/' }, { label: '수학', href: '#/math' }, { label: data.gradeName }]);
-
-  const parts = [...new Set(data.units.map(u => u.part))];
-  app.innerHTML = `
-    <h1>${data.gradeName} 수학</h1>
-    <p class="lead">공부할 단원을 선택하세요.</p>
-    ${parts.map(p => `
-      <div class="group-title">${p}</div>
-      <div class="grid wide">
-        ${data.units.filter(u => u.part === p).map(u => `
-          <a class="choice" href="#/math/${gradeId}/${u.id}">
-            <div class="unit-num">${u.no}단원</div>
-            <div class="name">${u.title}</div>
-            <div class="meta">${u.summary}</div>
-          </a>`).join('')}
-      </div>`).join('')}`;
-}
-
-function viewUnit(gradeId, unitId) {
-  const data = readyGrades()[gradeId];
-  const unit = data && data.units.find(u => u.id === unitId);
-  if (!unit) return go('#/math');
-  setCrumbs([
-    { label: '과목', href: '#/' },
-    { label: '수학', href: '#/math' },
-    { label: data.gradeName, href: `#/math/${gradeId}` },
-    { label: unit.title },
-  ]);
-
-  const toc = unit.sections.map((s, i) => `<li><a href="#" data-jump="s${i}">${s.title}</a></li>`).join('');
-
-  app.innerHTML = `
-    <a class="back" href="#/math/${gradeId}">← 단원 목록</a>
-    <div class="unit-head">
-      <div class="part">${unit.part} · ${unit.no}단원</div>
-      <h1>${unit.title}</h1>
-      <p class="lead">${unit.summary}</p>
-    </div>
-
-    <ul class="toc">${toc}<li><a href="#" data-jump="ex">예제</a></li></ul>
-
-    ${unit.sections.map((s, i) => `
-      <section class="card" id="s${i}">
-        <h2>${s.title}</h2>
-        ${s.body}
-        ${s.tip ? `<div class="tip"><strong class="label">꿀팁</strong>${s.tip}</div>` : ''}
-      </section>`).join('')}
-
-    <div class="section-label" id="ex">예제로 확인하기</div>
-    ${unit.examples.map(e => `
-      <details class="example">
-        <summary>${e.q}<div class="hint">직접 풀어 본 뒤 눌러서 풀이를 확인하세요.</div></summary>
-        <div class="answer">${e.a}</div>
-      </details>`).join('')}
-  `;
-
-  app.querySelectorAll('[data-jump]').forEach(a =>
-    a.addEventListener('click', ev => {
-      ev.preventDefault();
-      document.getElementById(a.dataset.jump).scrollIntoView({ behavior: 'smooth', block: 'start' });
-    })
-  );
-}
-
-/* ---------- 라우터 ---------- */
-
-function go(hash) { location.hash = hash; }
-
-function route() {
-  const parts = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
-  if (parts.length === 0) viewSubjects();
-  else if (parts[0] === 'math' && parts.length === 1) viewGrades();
-  else if (parts[0] === 'math' && parts.length === 2) viewUnits(parts[1]);
-  else if (parts[0] === 'math' && parts.length >= 3) viewUnit(parts[1], parts[2]);
-  else viewSubjects();
-
-  window.scrollTo(0, 0);
-  typeset();
-}
-
-window.addEventListener('hashchange', route);
-window.addEventListener('load', route);
-// KaTeX가 늦게 로드되는 경우 대비
-document.addEventListener('DOMContentLoaded', () => setTimeout(typeset, 300));
+  return out;
+};
 
   </script>
-</body>
-</html>
+  <script>
+/* 문제 생성기 ① 다항식 · 방정식과 부등식 */
+(function () {
+  const { r, R, pick, nz, abs, gcd, distinct, F, ftex, expr, poly, lin, par, sg, cat, fac, facs, fromRoots, ev, evF, synth, subst, sol, cx, cxF, quadSol } = window.H;
+
+  /* ───────── 1. 다항식 ───────── */
+
+  /* 곱셈공식과 그 변형 */
+  const P0 = {
+    1: [
+      () => {
+        const B = pick([100, 1000]), k = R(1, 9), g = pick([1, -1]), n = B + g * k, s = g > 0 ? '+' : '-';
+        return { q: r`$${n}^2$ 을 곱셈공식을 이용하여 계산하시오.`,
+          a: sol([r`$${n}^2=(${B}${s}${k})^2=${B}^2${s}2\cdot${B}\cdot${k}+${k}^2=${B * B}${s}${2 * B * k}+${k * k}$`], n * n) };
+      },
+      () => {
+        const a = R(1, 9), g = pick([1, -1]);
+        return { q: r`$(${lin(1, g * a)})^2$ 을 전개하시오.`,
+          a: sol([r`$(a${g > 0 ? '+' : '-'}b)^2=a^2${g > 0 ? '+' : '-'}2ab+b^2$ 에 $a=x,\ b=${a}$ 를 대입합니다.`], poly([1, 2 * g * a, a * a])) };
+      },
+      () => {
+        const B = pick([100, 1000]), k = R(1, 9), x = B - k, y = B + k;
+        return { q: r`$${x}\times${y}$ 을 곱셈공식을 이용하여 계산하시오.`,
+          a: sol([r`$${x}\times${y}=(${B}-${k})(${B}+${k})=${B}^2-${k}^2=${B * B}-${k * k}$`], B * B - k * k) };
+      }
+    ],
+    2: [
+      () => {
+        const a = R(2, 4), b = nz(-5, 5), E = expr([[a, 'x'], [b, 'y']]);
+        return { q: r`$(${E})^2$ 을 전개하시오.`,
+          a: sol([r`$(a\pm b)^2=a^2\pm2ab+b^2$ 을 이용합니다.`, r`$a^2=${a * a}x^2,\ 2ab=${2 * a * b}xy,\ b^2=${b * b}y^2$`], expr([[a * a, 'x^2'], [2 * a * b, 'xy'], [b * b, 'y^2']])) };
+      },
+      () => {
+        const a = nz(-4, 4);
+        return { q: r`$(${lin(1, a)})^3$ 을 전개하시오.`,
+          a: sol([r`$(a+b)^3=a^3+3a^2b+3ab^2+b^3$ 에 $a=x,\ b=${a}$ 를 대입합니다.`], poly([1, 3 * a, 3 * a * a, a ** 3])) };
+      },
+      () => {
+        const p = R(1, 3), q = R(1, 3), s = pick([1, -1]);
+        const first = expr([[p, 'x'], [s * q, 'y']]), second = expr([[p * p, 'x^2'], [-s * p * q, 'xy'], [q * q, 'y^2']]);
+        const f = s > 0 ? r`$(a+b)(a^2-ab+b^2)=a^3+b^3$` : r`$(a-b)(a^2+ab+b^2)=a^3-b^3$`;
+        return { q: r`$(${first})(${second})$ 을 전개하시오.`,
+          a: sol([f + r` 에 $a=${p}x,\ b=${q}y$ 를 대입합니다.`], expr([[p ** 3, 'x^3'], [s * q ** 3, 'y^3']])) };
+      }
+    ],
+    3: [
+      () => {
+        const a = R(-4, 6), b = R(-4, 6), s = a + b, p = a * b, v = s * s - 2 * p;
+        return { q: r`$a+b=${s},\ ab=${p}$ 일 때, $a^2+b^2$ 의 값을 구하시오.`,
+          a: sol([r`$a^2+b^2=(a+b)^2-2ab=${par(s)}^2-2\cdot${par(p)}=${s * s}${sg(-2 * p)}$`], v) };
+      },
+      () => {
+        const a = R(-4, 5), b = R(-4, 5), s = a + b, p = a * b, v = s ** 3 - 3 * p * s;
+        return { q: r`$a+b=${s},\ ab=${p}$ 일 때, $a^3+b^3$ 의 값을 구하시오.`,
+          a: sol([r`$a^3+b^3=(a+b)^3-3ab(a+b)=${par(s)}^3-3\cdot${par(p)}\cdot${par(s)}=${s ** 3}${sg(-3 * p * s)}$`], v) };
+      },
+      () => {
+        const t = pick([3, 4, 5, 6, -3, -4, -5]);
+        if (Math.random() < 0.5)
+          return { q: r`$x+\dfrac{1}{x}=${t}$ 일 때, $x^2+\dfrac{1}{x^2}$ 의 값을 구하시오.`,
+            a: sol([r`$x^2+\dfrac{1}{x^2}=\left(x+\dfrac{1}{x}\right)^2-2=${par(t)}^2-2=${t * t}-2$`], t * t - 2) };
+        return { q: r`$x+\dfrac{1}{x}=${t}$ 일 때, $x^3+\dfrac{1}{x^3}$ 의 값을 구하시오.`,
+          a: sol([r`$x^3+\dfrac{1}{x^3}=\left(x+\dfrac{1}{x}\right)^3-3\left(x+\dfrac{1}{x}\right)=${par(t)}^3-3\cdot${par(t)}=${t ** 3}${sg(-3 * t)}$`], t ** 3 - 3 * t) };
+      },
+      () => {
+        const [a, b, c] = [R(-3, 4), R(-3, 4), R(-3, 4)], s = a + b + c, p = a * b + b * c + c * a, v = s * s - 2 * p;
+        return { q: r`$a+b+c=${s},\ ab+bc+ca=${p}$ 일 때, $a^2+b^2+c^2$ 의 값을 구하시오.`,
+          a: sol([r`$a^2+b^2+c^2=(a+b+c)^2-2(ab+bc+ca)=${par(s)}^2-2\cdot${par(p)}=${s * s}${sg(-2 * p)}$`], v) };
+      },
+      () => {
+        const a = R(-4, 5), b = R(-4, 5), d = a - b, p = a * b;
+        if (Math.random() < 0.5)
+          return { q: r`$a-b=${d},\ ab=${p}$ 일 때, $a^2+b^2$ 의 값을 구하시오.`,
+            a: sol([r`$a^2+b^2=(a-b)^2+2ab=${par(d)}^2+2\cdot${par(p)}=${d * d}${sg(2 * p)}$`], d * d + 2 * p) };
+        return { q: r`$a-b=${d},\ ab=${p}$ 일 때, $a^3-b^3$ 의 값을 구하시오.`,
+          a: sol([r`$a^3-b^3=(a-b)^3+3ab(a-b)=${par(d)}^3+3\cdot${par(p)}\cdot${par(d)}=${d ** 3}${sg(3 * p * d)}$`], d ** 3 + 3 * p * d) };
+      }
+    ]
+  };
+
+  /* 나머지정리와 인수정리 */
+  const P1 = {
+    1: [
+      () => {
+        const c = [R(1, 2), R(-5, 5), R(-5, 5), R(-6, 6)], k = nz(-3, 3);
+        return { q: r`다항식 $f(x)=${poly(c)}$ 를 $${lin(1, -k)}$ 로 나눈 나머지를 구하시오.`,
+          a: sol([r`나머지정리에 의해 나머지는 $f(${k})$ 입니다.`, r`$f(${k})=${subst(c, k)}=${ev(c, k)}$`], ev(c, k)) };
+      },
+      () => {
+        const c = [R(1, 3), R(-5, 5), R(-6, 6)], k = nz(-4, 4);
+        return { q: r`다항식 $f(x)=${poly(c)}$ 를 $${lin(1, -k)}$ 로 나눈 나머지를 구하시오.`,
+          a: sol([r`나머지정리에 의해 나머지는 $f(${k})$ 입니다.`, r`$f(${k})=${subst(c, k)}=${ev(c, k)}$`], ev(c, k)) };
+      }
+    ],
+    2: [
+      () => {
+        const p = pick([2, 3]), q = pick([-3, -2, -1, 1, 2, 3].filter(v => gcd(p, v) === 1));
+        const c = Math.random() < 0.5 ? [R(1, 3), R(-5, 5), R(-5, 5)] : [R(1, 3), R(-4, 4), R(-4, 4), R(-5, 5)];
+        const x0 = F(-q, p), v = evF(c, x0);
+        return { q: r`다항식 $f(x)=${poly(c)}$ 를 $${lin(p, q)}$ 로 나눈 나머지를 구하시오.`,
+          a: sol([r`$${lin(p, q)}=0$ 에서 $x=${ftex(x0)}$ 이므로 나머지는 $f\left(${ftex(x0)}\right)$ 입니다.`, r`$f\left(${ftex(x0)}\right)=${ftex(v)}$`], ftex(v)) };
+      },
+      () => {
+        const a = pick([-2, -1, 1, 2, 3]), k = R(-4, 4), b = R(-5, 5), c = -(a ** 3 + k * a * a + b * a);
+        const rest = expr([[b, 'x'], [c, '']]);
+        const A = a * a, B = a ** 3 + b * a + c;
+        return { q: r`다항식 $f(x)=${cat('x^3+kx^2', rest)}$ 가 $${lin(1, -a)}$ 로 나누어떨어질 때, 상수 $k$ 의 값을 구하시오.`,
+          a: sol([r`인수정리에 의해 $f(${a})=0$ 입니다.`, r`$f(${a})=${expr([[A, 'k'], [B, '']])}=0$ 이므로 $k=${k}$`], k) };
+      },
+      () => {
+        const c = [R(1, 3), R(-5, 5), R(-5, 5), R(-6, 6)], k = nz(-3, 3), s = synth(c, k), qt = s.slice(0, -1), rem = s[s.length - 1];
+        return { q: r`다항식 $${poly(c)}$ 를 $${lin(1, -k)}$ 로 나누었을 때의 몫과 나머지를 구하시오.`,
+          a: sol([r`조립제법에서 $x=${k}$ 를 이용하면 계수는 $${c.join(',\ ')}\ \to\ ${s.join(',\ ')}$ 입니다.`, r`마지막 수가 나머지, 앞의 수들이 몫의 계수입니다.`], r`몫 $${poly(qt)}$, 나머지 $${rem}$`, true) };
+      }
+    ],
+    3: [
+      () => {
+        const [r1, r2] = distinct(-3, 4, 2).sort((x, y) => x - y), a = nz(-4, 4), b = R(-5, 5);
+        const m1 = a * r1 + b, m2 = a * r2 + b;
+        return { q: r`다항식 $f(x)$ 를 $${fac('x', r1)}$ 로 나눈 나머지가 $${m1}$, $${fac('x', r2)}$ 로 나눈 나머지가 $${m2}$ 일 때, $f(x)$ 를 $${fac('x', r1)}${fac('x', r2)}$ 로 나눈 나머지를 구하시오.`,
+          a: sol([r`이차식으로 나눈 나머지는 일차 이하이므로 $R(x)=ax+b$ 로 놓습니다.`, r`$f(${r1})=${expr([[r1, 'a'], [1, 'b']])}=${m1}$, $f(${r2})=${expr([[r2, 'a'], [1, 'b']])}=${m2}$`, r`연립하면 $a=${a},\ b=${b}$`], lin(a, b)) };
+      },
+      () => {
+        const c = pick([1, 2]), n = R(5, 12), odd = n % 2 === 1;
+        const ans = odd ? expr([[c ** (n - 1), 'x']]) : `${c ** n}`;
+        const f1 = c ** n, f2 = odd ? -(c ** n) : c ** n, mod = c * c;
+        return { q: r`$x^{${n}}$ 을 $x^2-${mod}$ 로 나눈 나머지를 구하시오.`,
+          a: sol([r`나머지를 $ax+b$ 라 하면 $x^{${n}}=(x^2-${mod})Q(x)+ax+b$ 입니다.`,
+            r`$x=${c}$ 대입: $${c}a+b=${f1}$,　$x=-${c}$ 대입: $-${c}a+b=${f2}$`,
+            odd ? r`연립하면 $a=${c ** (n - 1)},\ b=0$` : r`연립하면 $a=0,\ b=${c ** n}$`], ans) };
+      },
+      () => {
+        const [r1, r2] = distinct(-2, 3, 2, true), t = R(-3, 5), m = -r1 * r2 * t, s = pick([4, 5]);
+        const v = (s - r1) * (s - r2) * (s - t);
+        return { q: r`삼차식 $f(x)=x^3+ax^2+bx+c$ 가 $${lin(1, -r1)}$, $${lin(1, -r2)}$ 로 각각 나누어떨어지고 $f(0)=${m}$ 일 때, $f(${s})$ 의 값을 구하시오.`,
+          a: sol([r`$f(x)=${fac('x', r1)}${fac('x', r2)}(x-t)$ 로 놓을 수 있습니다. (최고차항의 계수가 1)`,
+            r`$f(0)=${par(-r1)}\cdot${par(-r2)}\cdot(-t)=${expr([[-r1 * r2, 't']])}=${m}$ 이므로 $t=${t}$`,
+            r`$f(${s})=(${s - r1})(${s - r2})(${s - t})=${v}$`], v) };
+      }
+    ]
+  };
+
+  /* 인수분해 */
+  const P2 = {
+    1: [
+      () => {
+        const p = nz(-8, 8), q = nz(-8, 8);
+        return { q: r`$${poly([1, p + q, p * q])}$ 을 인수분해하시오.`,
+          a: sol([r`합이 $${p + q}$, 곱이 $${p * q}$ 인 두 수는 $${p},\ ${q}$ 입니다.`], facs([-p, -q])) };
+      },
+      () => {
+        const k = R(2, 5), m = R(2, 6);
+        return { q: r`$${poly([k, 0, -k * m * m])}$ 을 인수분해하시오.`,
+          a: sol([r`공통인수 $${k}$ 로 묶으면 $${k}(x^2-${m * m})$`, r`$x^2-${m}^2=(x+${m})(x-${m})$`], `${k}${facs([m, -m])}`) };
+      }
+    ],
+    2: [
+      () => {
+        let a, b, p, q;
+        do { a = R(1, 3); b = R(1, 2); p = nz(-5, 5); q = nz(-5, 5); } while (gcd(a, p) !== 1 || gcd(b, q) !== 1);
+        const c = [a * b, a * q + b * p, p * q];
+        return { q: r`$${poly(c)}$ 을 인수분해하시오.`,
+          a: sol([r`$${a * b}=${a}\times${b}$, $${p * q}=${p}\times${q}$ 로 놓고 교차해서 곱한 합이 $${c[1]}$ 이 되는 조합을 찾습니다.`], `(${lin(a, p)})(${lin(b, q)})`) };
+      },
+      () => {
+        const roots = distinct(-4, 4, 3, true), c = fromRoots(roots), order = [1, -1, 2, -2, 3, -3, 4, -4];
+        const first = order.find(x => roots.includes(x)), tried = order.slice(0, order.indexOf(first) + 1);
+        const fails = tried.slice(0, -1).map(x => `f(${x})\\ne0`).join(',\\ ');
+        const rest = roots.filter(x => x !== first), qt = poly(fromRoots(rest));
+        return { q: r`$${poly(c)}$ 을 인수분해하시오.`,
+          a: sol([r`$f(x)=${poly(c)}$ 로 놓고 상수항의 약수를 대입합니다.` + (fails ? r` $${fails}$ 이고` : '') + r` $f(${first})=0$ 이므로 $(${lin(1, -first)})$ 가 인수입니다.`,
+            r`조립제법으로 나누면 몫은 $${qt}$ 입니다.`], facs(roots)) };
+      },
+      () => {
+        const p = R(1, 3), q = R(1, 3), s = pick([1, -1]);
+        return { q: r`$${expr([[p ** 3, 'x^3'], [s * q ** 3, '']])}$ 을 인수분해하시오.`,
+          a: sol([r`$a^3${s > 0 ? '+' : '-'}b^3=(a${s > 0 ? '+' : '-'}b)(a^2${s > 0 ? '-' : '+'}ab+b^2)$ 에 $a=${p}x,\ b=${q}$ 를 대입합니다.`], `(${lin(p, s * q)})(${poly([p * p, -s * p * q, q * q])})`) };
+      }
+    ],
+    3: [
+      () => {
+        const b = R(1, 3), ts = distinct(b + 1, b + 4, 2), p1 = ts[0] * (ts[0] - b), p2 = ts[1] * (ts[1] - b), A = poly([1, b, 0]);
+        const roots = [-ts[0], -(b - ts[0]), -ts[1], -(b - ts[1])];
+        return { q: r`$(${A})^2-${p1 + p2}(${A})+${p1 * p2}$ 을 인수분해하시오.`,
+          a: sol([r`$A=${A}$ 로 치환하면 $A^2-${p1 + p2}A+${p1 * p2}=(A-${p1})(A-${p2})$`,
+            r`$${A}-${p1}=${fac('x', -ts[0])}${fac('x', -(b - ts[0]))}$,　$${A}-${p2}=${fac('x', -ts[1])}${fac('x', -(b - ts[1]))}$`], facs(roots)) };
+      },
+      () => {
+        const roots = distinct(-4, 4, 4, true), c = fromRoots(roots), order = [1, -1, 2, -2, 3, -3, 4, -4];
+        const found = order.filter(x => roots.includes(x)), r1 = found[0], r2 = found[1], rest = roots.filter(x => x !== r1 && x !== r2);
+        return { q: r`$${poly(c)}$ 을 인수분해하시오.`,
+          a: sol([r`$f(${r1})=0,\ f(${r2})=0$ 이므로 $(${lin(1, -r1)})(${lin(1, -r2)})$ 가 인수입니다.`,
+            r`조립제법을 두 번 적용하면 몫은 $${poly(fromRoots(rest))}=${facs(rest)}$ 입니다.`], facs(roots)) };
+      },
+      () => {
+        const [a, b] = distinct(1, 5, 2).sort((x, y) => x - y);
+        return { q: r`$${poly([1, 0, -(a * a + b * b), 0, a * a * b * b])}$ 을 인수분해하시오.`,
+          a: sol([r`$x^2=A$ 로 치환하면 $A^2-${a * a + b * b}A+${a * a * b * b}=(A-${a * a})(A-${b * b})$`,
+            r`$=(x^2-${a * a})(x^2-${b * b})$ 이고 각각 다시 인수분해합니다.`], facs([a, -a, b, -b])) };
+      }
+    ]
+  };
+
+  /* ───────── 2. 방정식과 부등식 ───────── */
+
+  /* 복소수 */
+  const UNIT = ['1', 'i', '-1', '-i'];
+  const E0 = {
+    1: [
+      () => {
+        const n = R(5, 60), qn = Math.floor(n / 4), m = n % 4, ans = UNIT[m];
+        return { q: r`$i^{${n}}$ 의 값을 구하시오. (단, $i=\sqrt{-1}$)`,
+          a: sol([r`$i^4=1$ 이므로 지수를 $4$ 로 나눈 나머지를 봅니다. $${n}=4\times${qn}+${m}$`, r`$i^{${n}}=(i^4)^{${qn}}\cdot i^{${m}}=${ans}$`], ans) };
+      },
+      () => {
+        const [a, b, c, d] = [R(-5, 5), nz(-5, 5), R(-5, 5), nz(-5, 5)], m = Math.random() < 0.5;
+        const re = m ? a + c : a - c, im = m ? b + d : b - d;
+        return { q: r`$(${cx(a, b)})${m ? '+' : '-'}(${cx(c, d)})$ 을 계산하시오.`,
+          a: sol([r`실수부분은 실수부분끼리, 허수부분은 허수부분끼리 계산합니다.`, r`실수부분: $${a}${m ? '+' : '-'}${par(c)}=${re}$,　허수부분: $${b}${m ? '+' : '-'}${par(d)}=${im}$`], cx(re, im)) };
+      },
+      () => {
+        const [a, b, c, d] = [nz(-4, 4), nz(-4, 4), nz(-4, 4), nz(-4, 4)];
+        const re = a * c - b * d, im = a * d + b * c;
+        return { q: r`$(${cx(a, b)})(${cx(c, d)})$ 을 계산하시오.`,
+          a: sol([r`$i^2=-1$ 임을 이용하여 전개합니다.`, r`$=${a * c}${sg(a * d)}i${sg(b * c)}i${sg(b * d)}i^2=${a * c}${sg(-b * d)}${sg(a * d + b * c)}i$`], cx(re, im)) };
+      }
+    ],
+    2: [
+      () => {
+        const a = R(-4, 5), b = nz(-4, 4), c = nz(-3, 3), d = nz(-3, 3), den = c * c + d * d;
+        const re = F(a * c + b * d, den), im = F(b * c - a * d, den);
+        return { q: r`$\dfrac{${cx(a, b)}}{${cx(c, d)}}$ 를 $p+qi$ 꼴로 나타내시오. ($p,q$ 는 실수)`,
+          a: sol([r`분모의 켤레복소수 $${cx(c, -d)}$ 를 분모·분자에 곱합니다.`, r`분모: $(${cx(c, d)})(${cx(c, -d)})=${c}^2+${d}^2=${den}$`, r`분자: $(${cx(a, b)})(${cx(c, -d)})=${cx(a * c + b * d, b * c - a * d)}$`], cxF(re, im)) };
+      },
+      () => {
+        const x = R(-5, 6), y = R(-5, 6), s = x + y, t = x - y;
+        return { q: r`$(x+y)+(x-y)i=${cx(s, t)}$ 일 때, 실수 $x,\ y$ 의 값을 구하시오.`,
+          a: sol([r`복소수가 서로 같을 조건에서 $x+y=${s},\ x-y=${t}$`, r`두 식을 더하면 $2x=${s + t}$, 빼면 $2y=${s - t}$`], `x=${x},\ y=${y}`) };
+      },
+      () => {
+        const a = nz(-4, 4), b = nz(-4, 4);
+        return { q: r`$(${cx(a, b)})^2$ 을 계산하시오.`,
+          a: sol([r`$(${cx(a, b)})^2=${a * a}${sg(2 * a * b)}i${sg(b * b)}i^2$`, r`$i^2=-1$ 이므로 $=${a * a - b * b}${sg(2 * a * b)}i$`], cx(a * a - b * b, 2 * a * b)) };
+      }
+    ],
+    3: [
+      () => {
+        const n = R(10, 100), m = n % 4, ans = ['0', 'i', 'i-1', '-1'][m];
+        return { q: r`$i+i^2+i^3+\cdots+i^{${n}}$ 의 값을 구하시오.`,
+          a: sol([r`$i+i^2+i^3+i^4=i-1-i+1=0$ 이므로 연속한 4개의 합은 $0$ 입니다.`, r`$${n}=4\times${Math.floor(n / 4)}+${m}$ 이므로 남는 ${m}개의 항만 더하면 됩니다.`], ans) };
+      },
+      () => {
+        const n = R(10, 99), m = n % 4, ans = UNIT[m];
+        return { q: r`$\left(\dfrac{1+i}{1-i}\right)^{${n}}$ 의 값을 구하시오.`,
+          a: sol([r`$\dfrac{1+i}{1-i}=\dfrac{(1+i)^2}{(1-i)(1+i)}=\dfrac{2i}{2}=i$`, r`따라서 $i^{${n}}$ 이고 $${n}=4\times${Math.floor(n / 4)}+${m}$ 이므로 $${ans}$`], ans) };
+      },
+      () => {
+        const n = R(2, 6), m = n % 4, v = 2 ** n, [re, im] = [[v, 0], [0, v], [-v, 0], [0, -v]][m];
+        return { q: r`$(1+i)^{${2 * n}}$ 의 값을 구하시오.`,
+          a: sol([r`$(1+i)^2=2i$ 이므로 $(1+i)^{${2 * n}}=(2i)^{${n}}=2^{${n}}\cdot i^{${n}}$`, r`$i^{${n}}=${UNIT[m]}$ 이므로 $${v}\cdot(${UNIT[m]})$`], cx(re, im)) };
+      },
+      () => {
+        const a = nz(-3, 3), b = nz(-3, 3), c = nz(-3, 3), real = Math.random() < 0.5;
+        const E = `(x${c < 0 ? '-' : '+'}${abs(c) === 1 ? '' : abs(c)}i)(${cx(a, b)})`;
+        const reP = expr([[a, 'x'], [-b * c, '']]), imP = expr([[b, 'x'], [a * c, '']]);
+        const x = real ? F(-a * c, b) : F(b * c, a);
+        return { q: r`복소수 $z=${E}$ 가 ${real ? '실수' : '순허수'}가 되도록 하는 실수 $x$ 의 값을 구하시오.`,
+          a: sol([r`$z=(${reP})+(${imP})i$ 로 정리됩니다.`, real ? r`실수가 되려면 허수부분이 $0$: $${imP}=0$` : r`순허수가 되려면 실수부분이 $0$: $${reP}=0$ (이때 허수부분은 $0$ 이 아님)`], `x=${ftex(x)}`) };
+      }
+    ]
+  };
+
+  /* 이차방정식과 판별식 */
+  const E1 = {
+    1: [
+      () => {
+        const [p, q] = [nz(-6, 6), nz(-6, 6)];
+        return { q: r`이차방정식 $${poly([1, p + q, p * q])}=0$ 을 푸시오.`,
+          a: sol([r`좌변을 인수분해하면 $${facs([-p, -q])}=0$`], p === q ? `x=${-p}` : `x=${-p}\\text{ 또는 }x=${-q}`) };
+      },
+      () => {
+        let a = R(1, 3), b = R(-6, 6), c = R(-5, 5);
+        const t = Math.random();
+        if (t < 0.3) { const rr = R(-3, 3); b = -2 * a * rr; c = a * rr * rr; }
+        else if (t < 0.6) { c = Math.abs(c) + 1; b = R(-2, 2); }
+        const D = b * b - 4 * a * c;
+        const kind = D > 0 ? '서로 다른 두 실근' : D === 0 ? '중근(실근)' : '서로 다른 두 허근';
+        return { q: r`이차방정식 $${poly([a, b, c])}=0$ 의 근의 종류를 판별하시오.`,
+          a: sol([r`$D=b^2-4ac=${par(b)}^2-4\cdot${par(a)}\cdot${par(c)}=${D}$`, D > 0 ? r`$D>0$ 이므로 서로 다른 두 실근` : D === 0 ? r`$D=0$ 이므로 중근` : r`$D<0$ 이므로 서로 다른 두 허근`], kind, true) };
+      }
+    ],
+    2: [
+      () => {
+        const a = R(1, 3), b = 2 * R(-4, 4), c = R(-5, 4), res = quadSol(a, b, c);
+        return { q: r`이차방정식 $${poly([a, b, c])}=0$ 을 푸시오.`,
+          a: sol([r`$D=b^2-4ac=${par(b)}^2-4\cdot${par(a)}\cdot${par(c)}=${res.D}$`, r`근의 공식 $x=\dfrac{-b\pm\sqrt{D}}{2a}$ 를 이용합니다.`], res.t) };
+      },
+      () => {
+        const p = nz(-4, 4), kind = pick([0, 1, 2]), p2 = p * p;
+        const eq = cat(poly([1, 2 * p, 0]), 'k') + '=0';
+        const text = ['서로 다른 두 실근을 가질', '중근을 가질', '서로 다른 두 허근을 가질'][kind];
+        const ans = [`k<${p2}`, `k=${p2}`, `k>${p2}`][kind];
+        const cond = ['D/4>0', 'D/4=0', 'D/4<0'][kind];
+        return { q: r`이차방정식 $${eq}$ 이 ${text} 때, 실수 $k$ 의 값 또는 범위를 구하시오.`,
+          a: sol([r`$\dfrac{D}{4}=${par(p)}^2-k=${p2}-k$`, r`$${cond}$ 에서 $${p2}-k$ 의 부호를 따집니다.`], ans) };
+      }
+    ],
+    3: [
+      () => {
+        const c1 = pick([1, 2, 3, -1, -2]), u = R(1, 3), c0 = u * u - c1 * c1, k1 = 2 * c1 - 2 * u, k2 = 2 * c1 + 2 * u;
+        const kk = expr([[c1, 'k'], [c0, '']]), lo = Math.min(k1, k2), hi = Math.max(k1, k2);
+        return { q: r`이차방정식 $x^2+kx+(${kk})=0$ 이 중근을 가질 때, 실수 $k$ 의 값을 모두 구하시오.`,
+          a: sol([r`$D=k^2-4(${kk})=${cat('k^2', expr([[-4 * c1, 'k'], [-4 * c0, '']]))}=0$`, r`$${facs([k1, k2], 'k')}=0$ 이므로 $k=${lo}$ 또는 $k=${hi}$`], `k=${lo}\\text{ 또는 }k=${hi}`) };
+      },
+      () => {
+        const a = nz(-4, 4), b = nz(-4, 4), p = -2 * a, q = a * a + b * b;
+        return { q: r`실수 $p,q$ 에 대하여 이차방정식 $x^2+px+q=0$ 의 한 근이 $${cx(a, b)}$ 일 때, $p+q$ 의 값을 구하시오.`,
+          a: sol([r`계수가 실수이므로 켤레복소수 $${cx(a, -b)}$ 도 근입니다.`, r`근과 계수의 관계: $-p=${a}+${par(a)}=${2 * a}$ 이므로 $p=${p}$`, r`$q=(${cx(a, b)})(${cx(a, -b)})=${a}^2+${b}^2=${q}$`], p + q) };
+      },
+      () => {
+        const p = nz(-3, 3), p2 = p * p, eq = cat(poly([1, -2 * p, 0]), 'k');
+        return { q: r`이차함수 $y=${eq}$ 의 그래프가 $x$ 축과 만나지 않도록 하는 실수 $k$ 의 값의 범위를 구하시오.`,
+          a: sol([r`$x$ 축과 만나지 않으므로 $${eq}=0$ 이 허근을 가져야 합니다.`, r`$\dfrac{D}{4}=${par(-p)}^2-k=${p2}-k<0$`], `k>${p2}`) };
+      }
+    ]
+  };
+
+  /* 근과 계수의 관계 */
+  const E2 = {
+    1: [
+      () => {
+        const a = R(1, 3), b = R(-6, 6), c = R(-6, 6);
+        return { q: r`이차방정식 $${poly([a, b, c])}=0$ 의 두 근을 $\alpha,\ \beta$ 라 할 때, $\alpha+\beta$ 와 $\alpha\beta$ 의 값을 구하시오.`,
+          a: sol([r`$\alpha+\beta=-\dfrac{b}{a}=${ftex(F(-b, a))}$`, r`$\alpha\beta=\dfrac{c}{a}=${ftex(F(c, a))}$`], r`$\alpha+\beta=${ftex(F(-b, a))},\ \alpha\beta=${ftex(F(c, a))}$`, true) };
+      },
+      () => {
+        const [p, q] = [R(-5, 6), R(-5, 6)];
+        return { q: r`두 수 $${p},\ ${q}$ 를 근으로 하고 $x^2$ 의 계수가 $1$ 인 이차방정식을 구하시오.`,
+          a: sol([r`합 $${p}+${par(q)}=${p + q}$, 곱 $${p}\cdot${par(q)}=${p * q}$`, r`$x^2-(\text{합})x+(\text{곱})=0$ 에 대입합니다.`], poly([1, -(p + q), p * q]) + '=0') };
+      }
+    ],
+    2: [
+      () => {
+        const b = R(-6, 6), c = nz(-6, 6), s = -b, p = c, t = pick([0, 1, 2]);
+        const target = [r`\alpha^2+\beta^2`, r`\dfrac{1}{\alpha}+\dfrac{1}{\beta}`, r`(\alpha-\beta)^2`][t];
+        const val = [ftex(F(s * s - 2 * p)), ftex(F(s, p)), ftex(F(s * s - 4 * p))][t];
+        const how = [r`$\alpha^2+\beta^2=(\alpha+\beta)^2-2\alpha\beta=${s * s}${sg(-2 * p)}$`, r`$\dfrac{1}{\alpha}+\dfrac{1}{\beta}=\dfrac{\alpha+\beta}{\alpha\beta}=\dfrac{${s}}{${p}}$`, r`$(\alpha-\beta)^2=(\alpha+\beta)^2-4\alpha\beta=${s * s}${sg(-4 * p)}$`][t];
+        return { q: r`이차방정식 $${poly([1, b, c])}=0$ 의 두 근을 $\alpha,\ \beta$ 라 할 때, $${target}$ 의 값을 구하시오.`,
+          a: sol([r`근과 계수의 관계에서 $\alpha+\beta=${s},\ \alpha\beta=${p}$`, how], val) };
+      },
+      () => {
+        const p = R(-3, 4), q = pick([2, 3, 5, 6, 7]);
+        const A = p === 0 ? `\\sqrt{${q}}` : `${p}+\\sqrt{${q}}`, B = p === 0 ? `-\\sqrt{${q}}` : `${p}-\\sqrt{${q}}`;
+        return { q: r`$${A},\ ${B}$ 를 두 근으로 하고 $x^2$ 의 계수가 $1$ 인 이차방정식을 구하시오.`,
+          a: sol([r`합: $(${A})+(${B})=${2 * p}$`, r`곱: $(${A})(${B})=${p * p}-${q}=${p * p - q}$`], poly([1, -2 * p, p * p - q]) + '=0') };
+      }
+    ],
+    3: [
+      () => {
+        const s = R(-5, 6), p = R(-5, 6);
+        if (Math.random() < 0.5) {
+          const S = s + 2, Pd = p + s + 1;
+          return { q: r`이차방정식 $${poly([1, -s, p])}=0$ 의 두 근을 $\alpha,\ \beta$ 라 할 때, $\alpha+1,\ \beta+1$ 을 두 근으로 하고 $x^2$ 의 계수가 $1$ 인 이차방정식을 구하시오.`,
+            a: sol([r`$\alpha+\beta=${s},\ \alpha\beta=${p}$`, r`새 두 근의 합: $(\alpha+1)+(\beta+1)=${s}+2=${S}$`, r`새 두 근의 곱: $(\alpha+1)(\beta+1)=\alpha\beta+(\alpha+\beta)+1=${p}${sg(s)}+1=${Pd}$`], poly([1, -S, Pd]) + '=0') };
+        }
+        const S = s * s - 2 * p, Pd = p * p;
+        return { q: r`이차방정식 $${poly([1, -s, p])}=0$ 의 두 근을 $\alpha,\ \beta$ 라 할 때, $\alpha^2,\ \beta^2$ 을 두 근으로 하고 $x^2$ 의 계수가 $1$ 인 이차방정식을 구하시오.`,
+          a: sol([r`$\alpha+\beta=${s},\ \alpha\beta=${p}$`, r`합: $\alpha^2+\beta^2=(\alpha+\beta)^2-2\alpha\beta=${S}$`, r`곱: $\alpha^2\beta^2=(\alpha\beta)^2=${Pd}$`], poly([1, -S, Pd]) + '=0') };
+      },
+      () => {
+        const [m, n] = pick([[1, 2], [1, 3], [2, 3]]), t = R(1, 4), s = (m + n) * t, k = m * n * t * t;
+        return { q: r`이차방정식 $x^2-${s}x+k=0$ 의 두 근의 비가 $${m}:${n}$ 일 때, 상수 $k$ 의 값을 구하시오.`,
+          a: sol([r`두 근을 $${m}t,\ ${n}t$ 라 하면 합: $${m + n}t=${s}$ 이므로 $t=${t}$`, r`두 근은 $${m * t},\ ${n * t}$ 이고 $k=${m * t}\times${n * t}=${k}$`], k) };
+      }
+    ]
+  };
+
+  /* 이차부등식 */
+  const ineq = (op, a, b) => {
+    if (op === '<') return `${a}<x<${b}`;
+    if (op === '≤') return `${a}\\le x\\le ${b}`;
+    if (op === '>') return `x<${a}\\text{ 또는 }x>${b}`;
+    return `x\\le ${a}\\text{ 또는 }x\\ge ${b}`;
+  };
+  const opTex = { '<': '<', '>': '>', '≤': '\\le', '≥': '\\ge' };
+  const flip = { '<': '>', '>': '<', '≤': '≥', '≥': '≤' };
+
+  const E3 = {
+    1: [
+      () => {
+        const [a, b] = distinct(-6, 6, 2).sort((x, y) => x - y), op = pick(['<', '>', '≤', '≥']);
+        return { q: r`이차부등식 $${poly([1, -(a + b), a * b])}${opTex[op]}0$ 을 푸시오.`,
+          a: sol([r`인수분해하면 $${facs([a, b])}${opTex[op]}0$`, r`아래로 볼록한 포물선에서 ${op === '<' || op === '≤' ? '$x$ 축 아래(두 근 사이)' : '$x$ 축 위(두 근 바깥)'}를 읽습니다.`], ineq(op, a, b)) };
+      }
+    ],
+    2: [
+      () => {
+        const [a, b] = distinct(-5, 5, 2).sort((x, y) => x - y), op = pick(['<', '>', '≤', '≥']), op2 = flip[op];
+        return { q: r`이차부등식 $${poly([-1, a + b, -a * b])}${opTex[op]}0$ 을 푸시오.`,
+          a: sol([r`양변에 $-1$ 을 곱하면 부등호의 방향이 바뀝니다. $${poly([1, -(a + b), a * b])}${opTex[op2]}0$`, r`인수분해하면 $${facs([a, b])}${opTex[op2]}0$`], ineq(op2, a, b)) };
+      },
+      () => {
+        const [a, b] = distinct(-5, 5, 2).sort((x, y) => x - y);
+        return { q: r`이차부등식 $x^2+px+q<0$ 의 해가 $${a}<x<${b}$ 일 때, $p+q$ 의 값을 구하시오.`,
+          a: sol([r`해가 $${a}<x<${b}$ 인 이차부등식은 $${facs([a, b])}<0$`, r`전개하면 $${poly([1, -(a + b), a * b])}<0$ 이므로 $p=${-(a + b)},\ q=${a * b}$`], -(a + b) + a * b) };
+      },
+      () => {
+        const [al, be] = distinct(-4, 4, 2).sort((x, y) => x - y), m = R(1, 3);
+        const A = m * (al + be), B = -m * al * be, lead = m === 1 ? '-x^2' : `-${m}x^2`;
+        return { q: r`이차부등식 $${lead}+ax+b>0$ 의 해가 $${al}<x<${be}$ 일 때, $a+b$ 의 값을 구하시오.`,
+          a: sol([r`해가 $${al}<x<${be}$ 이므로 $${facs([al, be])}<0$ 입니다. 양변에 $-${m}$ 을 곱하면 $-${m}${facs([al, be])}>0$`,
+            r`전개하면 $${poly([-m, A, B])}>0$ 이므로 $a=${A},\ b=${B}$`], A + B) };
+      }
+    ],
+    3: [
+      () => {
+        let r1, r2;
+        do { [r1, r2] = distinct(-3, 4, 2).sort((x, y) => x - y); } while (r1 + r2 === 0);
+        const c1 = r1 + r2, c0 = -r1 * r2, kk = lin(c1, c0, 'k');
+        return { q: r`모든 실수 $x$ 에 대하여 부등식 $${cat('x^2-2kx', kk)}>0$ 이 성립하도록 하는 실수 $k$ 의 값의 범위를 구하시오.`,
+          a: sol([r`모든 실수 $x$ 에서 성립하려면 $D<0$ 이어야 합니다.`, r`$\dfrac{D}{4}=k^2-(${kk})=${poly([1, -c1, -c0], 'k')}<0$`, r`$${facs([r1, r2], 'k')}<0$ 이므로`], `${r1}<k<${r2}`) };
+      },
+      () => {
+        const [a, b] = distinct(-5, 4, 2).sort((x, y) => x - y), [c, d] = distinct(-5, 5, 2).sort((x, y) => x - y);
+        const pieces = [], i1 = [a, Math.min(b, c)], i2 = [Math.max(a, d), b];
+        if (i1[0] < i1[1]) pieces.push(`${i1[0]}<x<${i1[1]}`);
+        if (i2[0] < i2[1]) pieces.push(`${i2[0]}<x<${i2[1]}`);
+        const ans = pieces.length ? pieces.join('\\text{ 또는 }') : '\\text{해가 없다}';
+        return { q: r`연립부등식 $\begin{cases}${poly([1, -(a + b), a * b])}<0\\ ${poly([1, -(c + d), c * d])}>0\end{cases}$ 의 해를 구하시오.`,
+          a: sol([r`첫째 식: $${facs([a, b])}<0$ 이므로 $${a}<x<${b}$`, r`둘째 식: $${facs([c, d])}>0$ 이므로 $x<${c}$ 또는 $x>${d}$`, r`두 해의 공통부분을 수직선에 나타내어 구합니다.`], ans) };
+      }
+    ]
+  };
+
+  Object.assign(window.GEN, {
+    polynomial: [P0, P1, P2],
+    equation: [E0, E1, E2, E3]
+  });
+})();
+
+  </script>
+  <script>
+/* 문제 생성기 ② 경우의 수 · 행렬 · 도형의 방정식 */
+(function () {
+  const { r, R, pick, nz, abs, gcd, shuffle, distinct, F, fadd, fsub, fmul, fdiv, ftex, expr, poly, lin, par, sg, cat, fac, facs, sqT, sol, mat, mmul, madd, mscl, rndM, fact, P, C, lineY } = window.H;
+
+  const pf = (p, e) => e === 1 ? `${p}` : `${p}^{${e}}`;
+  const nPr = (n, k) => `{}_{${n}}\\mathrm{P}_{${k}}`;
+  const nCr = (n, k) => `{}_{${n}}\\mathrm{C}_{${k}}`;
+
+  /* ───────── 3. 경우의 수 ───────── */
+
+  const diceList = s => { const l = []; for (let a = 1; a <= 6; a++) for (let b = 1; b <= 6; b++) if (a + b === s) l.push(`(${a},${b})`); return l; };
+
+  const K0 = {
+    1: [
+      () => {
+        const a = R(3, 9), b = R(3, 9), t = pick([0, 1, 2]);
+        const q = [
+          r`서로 다른 소설책 ${a}권과 서로 다른 만화책 ${b}권이 있다. 이 중에서 한 권을 고르는 경우의 수를 구하시오.`,
+          r`A 지점에서 B 지점까지 가는 버스 노선이 ${a}가지, 지하철 노선이 ${b}가지 있다. 버스 또는 지하철 중 하나를 이용하여 가는 경우의 수를 구하시오.`,
+          r`빵 ${a}종류와 떡 ${b}종류 중에서 한 가지를 고르는 경우의 수를 구하시오.`][t];
+        return { q, a: sol([r`두 사건이 동시에 일어나지 않으므로 합의 법칙을 씁니다. $${a}+${b}=${a + b}$`], a + b) };
+      },
+      () => {
+        const a = R(3, 8), b = R(3, 8), t = pick([0, 1]);
+        const q = [r`상의 ${a}종류, 하의 ${b}종류가 있다. 상의 한 벌과 하의 한 벌을 짝지어 입는 경우의 수를 구하시오.`,
+          r`집에서 도서관까지 가는 길이 ${a}가지, 도서관에서 학교까지 가는 길이 ${b}가지 있다. 집에서 도서관을 거쳐 학교까지 가는 경우의 수를 구하시오.`][t];
+        return { q, a: sol([r`두 사건이 잇달아 일어나므로 곱의 법칙을 씁니다. $${a}\times${b}=${a * b}$`], a * b) };
+      },
+      () => {
+        const a = R(2, 5), b = R(2, 5), c = R(2, 4);
+        return { q: r`메인 요리 ${a}종류, 음료 ${b}종류, 디저트 ${c}종류 중에서 각각 하나씩 골라 세트를 만드는 경우의 수를 구하시오.`,
+          a: sol([r`곱의 법칙에 의해 $${a}\times${b}\times${c}=${a * b * c}$`], a * b * c) };
+      }
+    ],
+    2: [
+      () => {
+        const n = R(3, 7);
+        if (Math.random() < 0.5)
+          return { q: r`서로 다른 동전 ${n}개를 동시에 던질 때, 나오는 모든 경우의 수를 구하시오.`,
+            a: sol([r`동전 한 개는 앞, 뒤 $2$ 가지이므로 곱의 법칙에 의해 $2^{${n}}=${2 ** n}$`], 2 ** n) };
+        return { q: r`서로 다른 동전 ${n}개와 주사위 1개를 동시에 던질 때, 나오는 모든 경우의 수를 구하시오.`,
+          a: sol([r`$2^{${n}}\times6=${2 ** n}\times6=${2 ** n * 6}$`], 2 ** n * 6) };
+      },
+      () => {
+        const m = R(2, 4), n = R(2, 4), k = R(1, 3);
+        return { q: r`A 지점에서 B 지점으로 가는 길이 ${m}가지, B 지점에서 C 지점으로 가는 길이 ${n}가지 있고, A 지점에서 C 지점으로 바로 가는 길이 ${k}가지 있다. A 지점에서 C 지점으로 가는 모든 경우의 수를 구하시오.`,
+          a: sol([r`B 지점을 거치는 경우: $${m}\times${n}=${m * n}$ (곱의 법칙)`, r`바로 가는 경우: $${k}$ → 합의 법칙으로 $${m * n}+${k}=${m * n + k}$`], m * n + k) };
+      },
+      () => {
+        const ps = pick([[2, 3], [2, 5], [3, 5], [2, 7]]), [a, b] = [R(1, 4), R(1, 3)];
+        return { q: r`$${pf(ps[0], a)}\times${pf(ps[1], b)}$ 의 양의 약수의 개수를 구하시오.`,
+          a: sol([r`$${ps[0]}$ 의 거듭제곱 약수 $${a + 1}$ 가지, $${ps[1]}$ 의 거듭제곱 약수 $${b + 1}$ 가지를 곱의 법칙으로 곱합니다.`, r`$(${a}+1)(${b}+1)=${(a + 1) * (b + 1)}$`], (a + 1) * (b + 1)) };
+      },
+      () => {
+        const m = R(4, 7);
+        if (Math.random() < 0.5)
+          return { q: r`$0,1,2,\cdots,${m}$ 의 숫자 중에서 서로 다른 숫자 $3$ 개를 택하여 만들 수 있는 세 자리 자연수의 개수를 구하시오.`,
+            a: sol([r`백의 자리: $0$ 을 제외한 $${m}$ 가지`, r`십의 자리: 백의 자리에 쓴 수를 뺀 $${m}$ 가지,　일의 자리: $${m - 1}$ 가지`, r`$${m}\times${m}\times${m - 1}=${m * m * (m - 1)}$`], m * m * (m - 1)) };
+        return { q: r`$0,1,2,\cdots,${m}$ 의 숫자를 중복하여 사용할 수 있을 때, 만들 수 있는 세 자리 자연수의 개수를 구하시오.`,
+          a: sol([r`백의 자리: $${m}$ 가지,　십의 자리와 일의 자리: 각각 $${m + 1}$ 가지`, r`$${m}\times${m + 1}\times${m + 1}=${m * (m + 1) ** 2}$`], m * (m + 1) ** 2) };
+      },
+      () => {
+        const s = R(4, 10), l = diceList(s);
+        return { q: r`서로 다른 두 개의 주사위를 동시에 던질 때, 나온 눈의 수의 합이 $${s}$ 인 경우의 수를 구하시오.`,
+          a: sol([r`$(\text{첫째},\ \text{둘째})$ 로 나타내면 $${l.join(',\\ ')}$`], l.length) };
+      }
+    ],
+    3: [
+      () => {
+        const m = pick([3, 4, 5]), sums = []; let tot = 0;
+        for (let s = 2; s <= 12; s++) if (s % m === 0) { const c = diceList(s).length; sums.push(`${s}\\text{일 때 }${c}`); tot += c; }
+        return { q: r`서로 다른 두 개의 주사위를 동시에 던질 때, 나온 눈의 수의 합이 $${m}$ 의 배수인 경우의 수를 구하시오.`,
+          a: sol([r`합이 $${m}$ 의 배수인 경우를 나눕니다. 합의 법칙을 이용합니다.`, r`$${sums.join(',\\ ')}$ (가지)`], tot) };
+      },
+      () => {
+        const even = Math.random() < 0.5;
+        return { q: r`서로 다른 두 개의 주사위를 동시에 던질 때, 나온 눈의 수의 곱이 ${even ? '짝수' : '홀수'}인 경우의 수를 구하시오.`,
+          a: sol(even ? [r`전체 $36$ 가지에서 곱이 홀수인 경우(둘 다 홀수)를 뺍니다.`, r`곱이 홀수: $3\times3=9$ 가지이므로 $36-9=27$`] : [r`곱이 홀수이려면 두 눈이 모두 홀수여야 합니다.`, r`$3\times3=9$`], even ? 27 : 9) };
+      },
+      () => {
+        const a = R(1, 4), b = R(1, 3), c = R(1, 2), tot = (a + 1) * (b + 1) * (c + 1), ev = a * (b + 1) * (c + 1);
+        if (Math.random() < 0.5)
+          return { q: r`$2^{${a}}\times3^{${b}}\times${pf(5, c)}$ 의 양의 약수의 개수를 구하시오.`,
+            a: sol([r`$(${a}+1)(${b}+1)(${c}+1)=${tot}$`], tot) };
+        return { q: r`$2^{${a}}\times3^{${b}}\times${pf(5, c)}$ 의 양의 약수 중 짝수의 개수를 구하시오.`,
+          a: sol([r`짝수이려면 $2$ 를 적어도 한 번 포함해야 하므로 $2$ 의 지수는 $1$ ~ $${a}$ 중 하나입니다: $${a}$ 가지`, r`$${a}\times(${b}+1)\times(${c}+1)=${ev}$`], ev) };
+      },
+      () => {
+        const m = R(4, 7), e = Math.floor(m / 2), v = m * (m - 1) + e * (m - 1) ** 2;
+        return { q: r`$0,1,2,\cdots,${m}$ 의 숫자 중에서 서로 다른 숫자 $3$ 개를 택하여 만들 수 있는 세 자리 짝수의 개수를 구하시오.`,
+          a: sol([r`일의 자리가 $0$ 인 경우: $${m}\times${m - 1}=${m * (m - 1)}$`, r`일의 자리가 $0$ 이 아닌 짝수($${e}$ 가지)인 경우: 백의 자리 $${m - 1}$ 가지, 십의 자리 $${m - 1}$ 가지이므로 $${e}\times${m - 1}\times${m - 1}=${e * (m - 1) ** 2}$`, r`합의 법칙으로 $${m * (m - 1)}+${e * (m - 1) ** 2}=${v}$`], v) };
+      }
+    ]
+  };
+
+  const K1 = {
+    1: [
+      () => {
+        const n = R(5, 9), k = R(2, 4);
+        return { q: r`$${nPr(n, k)}$ 의 값을 구하시오.`,
+          a: sol([r`$${nPr(n, k)}$ 은 $${n}$ 부터 시작해 $${k}$ 개의 수를 곱합니다.`, r`$=${Array.from({ length: k }, (_, i) => n - i).join('\\times')}=${P(n, k)}$`], P(n, k)) };
+      },
+      () => {
+        const n = R(4, 7);
+        return { q: r`$${n}!$ 의 값을 구하시오.`, a: sol([r`$${n}!=${Array.from({ length: n }, (_, i) => n - i).join('\\times')}$`], fact(n)) };
+      },
+      () => {
+        const n = R(5, 9), k = R(2, 4);
+        return { q: r`서로 다른 ${n}권의 책 중에서 ${k}권을 뽑아 책꽂이에 일렬로 꽂는 방법의 수를 구하시오.`,
+          a: sol([r`순서가 있으므로 순열입니다. $${nPr(n, k)}=${Array.from({ length: k }, (_, i) => n - i).join('\\times')}=${P(n, k)}$`], P(n, k)) };
+      }
+    ],
+    2: [
+      () => {
+        const n = R(4, 7), v = 2 * fact(n - 1);
+        return { q: r`${n}명의 학생이 일렬로 설 때, 특정한 두 학생 A, B 가 이웃하여 서는 경우의 수를 구하시오.`,
+          a: sol([r`A, B 를 한 묶음으로 보고 $${n - 1}$ 개를 나열: $${n - 1}!=${fact(n - 1)}$`, r`묶음 안에서 A, B 의 자리를 바꾸는 경우: $2!=2$`, r`$${fact(n - 1)}\times2=${v}$`], v) };
+      },
+      () => {
+        const n = R(4, 6), v = fact(n) - 2 * fact(n - 1);
+        return { q: r`${n}명의 학생이 일렬로 설 때, 특정한 두 학생 A, B 가 이웃하지 않는 경우의 수를 구하시오.`,
+          a: sol([r`(전체) $-$ (A, B 가 이웃하는 경우) 로 구합니다.`, r`전체: $${n}!=${fact(n)}$,　이웃하는 경우: $${n - 1}!\times2=${2 * fact(n - 1)}$`, r`$${fact(n)}-${2 * fact(n - 1)}=${v}$`], v) };
+      },
+      () => {
+        const n = R(5, 8), k = R(3, 4), v = P(n - 1, k - 1);
+        return { q: r`서로 다른 ${n}명 중에서 ${k}명을 뽑아 일렬로 세울 때, 특정한 한 명이 맨 앞에 서는 경우의 수를 구하시오.`,
+          a: sol([r`맨 앞은 특정한 한 명으로 정해졌으므로 나머지 $${n - 1}$ 명 중 $${k - 1}$ 명을 뽑아 나열합니다.`, r`$${nPr(n - 1, k - 1)}=${v}$`], v) };
+      },
+      () => {
+        const m = R(2, 4), f = R(2, 4), v = fact(m) * fact(f + 1);
+        return { q: r`남학생 ${m}명과 여학생 ${f}명이 일렬로 설 때, 남학생끼리 이웃하여 서는 경우의 수를 구하시오.`,
+          a: sol([r`남학생 $${m}$ 명을 한 묶음으로 보면 (묶음 1개 + 여학생 ${f}명) $=${f + 1}$ 개를 나열: $${f + 1}!=${fact(f + 1)}$`, r`묶음 안에서 남학생끼리 자리를 바꾸는 경우: $${m}!=${fact(m)}$`, r`$${fact(f + 1)}\times${fact(m)}=${v}$`], v) };
+      }
+    ],
+    3: [
+      () => {
+        const a = R(3, 5), b = R(2, 4), v = fact(a) * P(a + 1, b);
+        return { q: r`남학생 ${a}명과 여학생 ${b}명이 일렬로 설 때, 여학생끼리는 서로 이웃하지 않도록 서는 경우의 수를 구하시오.`,
+          a: sol([r`남학생 $${a}$ 명을 먼저 세웁니다: $${a}!=${fact(a)}$`, r`남학생 사이사이와 양 끝, 모두 $${a + 1}$ 곳 중 $${b}$ 곳에 여학생을 세웁니다: $${nPr(a + 1, b)}=${P(a + 1, b)}$`, r`$${fact(a)}\times${P(a + 1, b)}=${v}$`], v) };
+      },
+      () => {
+        const a = R(3, 5), b = R(2, 4), v = P(a, 2) * fact(a + b - 2);
+        return { q: r`남학생 ${a}명과 여학생 ${b}명이 일렬로 설 때, 양 끝에 모두 남학생이 서는 경우의 수를 구하시오.`,
+          a: sol([r`양 끝에 설 남학생을 뽑아 세웁니다: $${nPr(a, 2)}=${P(a, 2)}$`, r`나머지 $${a + b - 2}$ 명을 가운데에 세웁니다: $${a + b - 2}!=${fact(a + b - 2)}$`, r`$${P(a, 2)}\times${fact(a + b - 2)}=${v}$`], v) };
+      },
+      () => {
+        const n = R(5, 9), k = R(3, 4), v = C(n - 1, k - 1) * fact(k);
+        return { q: r`서로 다른 ${n}개의 문자 중에서 ${k}개를 택하여 일렬로 나열할 때, 특정한 문자 a 를 반드시 포함하는 경우의 수를 구하시오.`,
+          a: sol([r`a 를 포함하여 ${k}개를 뽑는 방법: 나머지 $${n - 1}$ 개 중 $${k - 1}$ 개를 뽑으므로 $${nCr(n - 1, k - 1)}=${C(n - 1, k - 1)}$`, r`뽑은 ${k}개를 일렬로 나열: $${k}!=${fact(k)}$`, r`$${C(n - 1, k - 1)}\times${fact(k)}=${v}$`], v) };
+      }
+    ]
+  };
+
+  const K2 = {
+    1: [
+      () => {
+        const n = R(5, 10), k = R(2, 4);
+        const num = Array.from({ length: k }, (_, i) => n - i).join('\\times'), den = Array.from({ length: k }, (_, i) => k - i).join('\\times');
+        return { q: r`$${nCr(n, k)}$ 의 값을 구하시오.`,
+          a: sol([r`$${nCr(n, k)}=\dfrac{${num}}{${den}}=${C(n, k)}$`], C(n, k)) };
+      },
+      () => {
+        const n = R(8, 12), k = n - R(1, 2), s = n - k, den = s === 1 ? '1' : '2\\times1', num = s === 1 ? `${n}` : `${n}\\times${n - 1}`;
+        return { q: r`$${nCr(n, k)}$ 의 값을 구하시오.`,
+          a: sol([r`$${nCr(n, k)}=${nCr(n, s)}$ 임을 이용하면 계산이 쉽습니다.`, r`$${nCr(n, s)}=\dfrac{${num}}{${den}}=${C(n, k)}$`], C(n, k)) };
+      }
+    ],
+    2: [
+      () => {
+        const n = R(6, 10), k = R(3, 4), v = C(n - 1, k - 1);
+        return { q: r`${n}명 중에서 ${k}명을 뽑을 때, 특정한 한 명이 반드시 뽑히는 경우의 수를 구하시오.`,
+          a: sol([r`특정한 한 명은 이미 뽑혔다고 생각하고 나머지 $${n - 1}$ 명 중 $${k - 1}$ 명을 뽑습니다.`, r`$${nCr(n - 1, k - 1)}=${v}$`], v) };
+      },
+      () => {
+        const m = R(4, 6), f = R(3, 5), a = R(1, 3), b = R(1, 2), v = C(m, a) * C(f, b);
+        return { q: r`남학생 ${m}명, 여학생 ${f}명 중에서 남학생 ${a}명, 여학생 ${b}명을 뽑는 경우의 수를 구하시오.`,
+          a: sol([r`남학생 뽑기: $${nCr(m, a)}=${C(m, a)}$,　여학생 뽑기: $${nCr(f, b)}=${C(f, b)}$`, r`곱의 법칙: $${C(m, a)}\times${C(f, b)}=${v}$`], v) };
+      },
+      () => {
+        const m = R(3, 5), f = R(3, 5), k = 3, v = C(m + f, k) - C(f, k);
+        return { q: r`남학생 ${m}명, 여학생 ${f}명 중에서 ${k}명을 뽑을 때, 남학생이 적어도 한 명 포함되는 경우의 수를 구하시오.`,
+          a: sol([r`여사건(남학생이 한 명도 없는 경우 = 모두 여학생)을 이용합니다.`, r`전체: $${nCr(m + f, k)}=${C(m + f, k)}$,　모두 여학생: $${nCr(f, k)}=${C(f, k)}$`, r`$${C(m + f, k)}-${C(f, k)}=${v}$`], v) };
+      },
+      () => {
+        const n = R(5, 12), v = n * (n - 1) / 2;
+        return { q: r`$${nCr('n', 2)}=${v}$ 일 때, 자연수 $n$ 의 값을 구하시오.`,
+          a: sol([r`$\dfrac{n(n-1)}{2}=${v}$ 이므로 $n(n-1)=${2 * v}=${n}\times${n - 1}$`], n) };
+      }
+    ],
+    3: [
+      () => {
+        const m = R(3, 5), n = R(3, 5), v = C(m, 2) * C(n, 2);
+        return { q: r`평행한 직선 ${m}개와 이 직선들과 만나는 또 다른 평행한 직선 ${n}개로 만들어지는 평행사변형의 개수를 구하시오.`,
+          a: sol([r`첫째 평행선 묶음에서 $2$ 개: $${nCr(m, 2)}=${C(m, 2)}$,　둘째 묶음에서 $2$ 개: $${nCr(n, 2)}=${C(n, 2)}$`, r`곱의 법칙: $${C(m, 2)}\times${C(n, 2)}=${v}$`], v) };
+      },
+      () => {
+        const n = R(5, 12), v = n * (n - 3) / 2;
+        return { q: r`볼록 ${n}각형의 대각선의 개수를 구하시오.`,
+          a: sol([r`꼭짓점 $${n}$ 개 중 $2$ 개를 이어 만든 선분: $${nCr(n, 2)}=${C(n, 2)}$`, r`이 중 변의 개수 $${n}$ 을 빼면 $${C(n, 2)}-${n}=${v}$`], v) };
+      },
+      () => {
+        const n = R(6, 9), k = R(3, 4), v = C(n, 3) - C(k, 3);
+        return { q: r`평면 위에 ${n}개의 점이 있다. 이 중 ${k}개의 점은 한 직선 위에 있고, 그 외에는 어느 세 점도 한 직선 위에 있지 않을 때, 세 점을 꼭짓점으로 하는 삼각형의 개수를 구하시오.`,
+          a: sol([r`세 점을 뽑는 모든 경우: $${nCr(n, 3)}=${C(n, 3)}$`, r`한 직선 위의 ${k}개 점에서 세 점을 뽑으면 삼각형이 되지 않으므로 $${nCr(k, 3)}=${C(k, 3)}$ 를 뺍니다.`, r`$${C(n, 3)}-${C(k, 3)}=${v}$`], v) };
+      },
+      () => {
+        const n = R(6, 9), v = C(n, 3) - C(n - 2, 3);
+        return { q: r`${n}명 중에서 ${3}명의 위원을 뽑을 때, 특정한 두 사람 A, B 중 적어도 한 명이 포함되는 경우의 수를 구하시오.`,
+          a: sol([r`여사건(A, B 모두 뽑히지 않는 경우)을 이용합니다.`, r`전체: $${nCr(n, 3)}=${C(n, 3)}$,　A, B 를 제외한 $${n - 2}$ 명 중 $3$ 명: $${nCr(n - 2, 3)}=${C(n - 2, 3)}$`, r`$${C(n, 3)}-${C(n - 2, 3)}=${v}$`], v) };
+      }
+    ]
+  };
+
+  /* ───────── 4. 행렬 ───────── */
+
+  const AF = [
+    { t: 'i+j', f: (i, j) => i + j }, { t: 'i\\times j', f: (i, j) => i * j }, { t: '2i-j', f: (i, j) => 2 * i - j },
+    { t: 'i^2-j', f: (i, j) => i * i - j }, { t: 'i-2j', f: (i, j) => i - 2 * j }, { t: '3i+j', f: (i, j) => 3 * i + j },
+    { t: 'i+2j', f: (i, j) => i + 2 * j }, { t: 'i^2+j', f: (i, j) => i * i + j }, { t: '2i+3j', f: (i, j) => 2 * i + 3 * j },
+    { t: 'j-i', f: (i, j) => j - i }, { t: 'i\\times j+1', f: (i, j) => i * j + 1 }, { t: '3i-j', f: (i, j) => 3 * i - j }
+  ];
+  const AFP = [
+    { t: r`\begin{cases}i+j&(i\ge j)\\ i-j&(i<j)\end{cases}`, f: (i, j) => i >= j ? i + j : i - j },
+    { t: r`\begin{cases}1&(i=j)\\ i+j&(i\ne j)\end{cases}`, f: (i, j) => i === j ? 1 : i + j },
+    { t: r`\begin{cases}i\times j&(i\ge j)\\ 0&(i<j)\end{cases}`, f: (i, j) => i >= j ? i * j : 0 },
+    { t: r`\begin{cases}i-j&(i\ge j)\\ 0&(i<j)\end{cases}`, f: (i, j) => i >= j ? i - j : 0 },
+    { t: r`\begin{cases}2&(i=j)\\ i+j&(i\ne j)\end{cases}`, f: (i, j) => i === j ? 2 : i + j },
+    { t: r`\begin{cases}i+j&(i+j\text{ 가 짝수})\\ 0&(i+j\text{ 가 홀수})\end{cases}`, f: (i, j) => (i + j) % 2 === 0 ? i + j : 0 }
+  ];
+  const build = (n, m, f) => Array.from({ length: n }, (_, i) => Array.from({ length: m }, (_, j) => f(i + 1, j + 1)));
+
+  const M0 = {
+    1: [
+      () => {
+        const o = pick(AF), M = build(2, 2, o.f);
+        return { q: r`$i$ 행 $j$ 열의 성분 $a_{ij}$ 가 $a_{ij}=${o.t}$ 인 $2\times2$ 행렬 $A$ 를 구하시오.`,
+          a: sol([r`$a_{11}=${M[0][0]},\ a_{12}=${M[0][1]},\ a_{21}=${M[1][0]},\ a_{22}=${M[1][1]}$`], mat(M)) };
+      },
+      () => {
+        const o = pick(AF), M = build(2, 3, o.f);
+        return { q: r`$i$ 행 $j$ 열의 성분 $a_{ij}$ 가 $a_{ij}=${o.t}$ 인 $2\times3$ 행렬 $A$ 를 구하시오.`,
+          a: sol([r`행이 $2$ 개, 열이 $3$ 개이므로 $i=1,2$,　$j=1,2,3$ 을 차례로 대입합니다.`], mat(M)) };
+      }
+    ],
+    2: [
+      () => {
+        const x = R(-5, 6), y = R(-5, 6), a = x + y, b = x - y, z = R(-4, 5);
+        return { q: r`$\begin{pmatrix}x+y&2\\ ${z}&x-y\end{pmatrix}=\begin{pmatrix}${a}&2\\ ${z}&${b}\end{pmatrix}$ 일 때, 실수 $x,\ y$ 의 값을 구하시오.`,
+          a: sol([r`두 행렬이 같으므로 대응하는 성분이 모두 같습니다. $x+y=${a},\ x-y=${b}$`, r`두 식을 더하면 $2x=${a + b}$, 빼면 $2y=${a - b}$`], `x=${x},\\ y=${y}`) };
+      },
+      () => {
+        const o = pick(AF), M = build(3, 2, o.f);
+        return { q: r`$i$ 행 $j$ 열의 성분 $a_{ij}$ 가 $a_{ij}=${o.t}$ 인 $3\times2$ 행렬 $A$ 를 구하시오.`,
+          a: sol([r`행이 $3$ 개, 열이 $2$ 개입니다.`], mat(M)) };
+      }
+    ],
+    3: [
+      () => {
+        const o = pick([...AF, ...AFP]), M = build(3, 3, o.f), s = M.flat().reduce((x, y) => x + y, 0);
+        return { q: r`$i$ 행 $j$ 열의 성분 $a_{ij}$ 가 $a_{ij}=${o.t}$ 인 $3\times3$ 행렬 $A$ 의 모든 성분의 합을 구하시오.`,
+          a: sol([r`$A=${mat(M)}$`, r`모든 성분을 더하면 $${M.map(row => row.reduce((x, y) => x + y, 0)).join('+')}$ (행별 합)`], s) };
+      },
+      () => {
+        const o = pick([...AF, ...AFP]), M = build(3, 3, o.f), s = M[0][0] + M[1][1] + M[2][2];
+        return { q: r`$i$ 행 $j$ 열의 성분 $a_{ij}$ 가 $a_{ij}=${o.t}$ 인 $3\times3$ 행렬 $A$ 에서 $a_{11}+a_{22}+a_{33}$ 의 값을 구하시오.`,
+          a: sol([r`$a_{11}=${M[0][0]},\ a_{22}=${M[1][1]},\ a_{33}=${M[2][2]}$`], s) };
+      }
+    ]
+  };
+
+  const M1 = {
+    1: [
+      () => {
+        const A = rndM(2, 2, -5, 5), B = rndM(2, 2, -5, 5), k = pick([2, 3, -1, -2]), t = pick([0, 1, 2]);
+        if (t === 0) return { q: r`$A=${mat(A)},\ B=${mat(B)}$ 일 때, $A+B$ 를 구하시오.`, a: sol([r`같은 위치의 성분끼리 더합니다.`], mat(madd(A, B))) };
+        if (t === 1) return { q: r`$A=${mat(A)},\ B=${mat(B)}$ 일 때, $A-B$ 를 구하시오.`, a: sol([r`같은 위치의 성분끼리 뺍니다.`], mat(madd(A, B, -1))) };
+        return { q: r`$A=${mat(A)}$ 일 때, $${k === -1 ? '-' : k}A$ 를 구하시오.`, a: sol([r`모든 성분에 $${k}$ 를 곱합니다.`], mat(mscl(A, k))) };
+      }
+    ],
+    2: [
+      () => {
+        const A = rndM(2, 2, -4, 4), B = rndM(2, 2, -4, 4), a = R(2, 3), b = R(2, 3), s = pick([1, -1]);
+        const res = madd(mscl(A, a), mscl(B, b), s);
+        return { q: r`$A=${mat(A)},\ B=${mat(B)}$ 일 때, $${a}A${s > 0 ? '+' : '-'}${b}B$ 를 구하시오.`,
+          a: sol([r`$${a}A=${mat(mscl(A, a))},\ ${b}B=${mat(mscl(B, b))}$`], mat(res)) };
+      },
+      () => {
+        const A = rndM(2, 2, -4, 4), X = rndM(2, 2, -4, 4), B = madd(A, X);
+        return { q: r`$A=${mat(A)},\ B=${mat(B)}$ 일 때, $A+X=B$ 를 만족하는 행렬 $X$ 를 구하시오.`,
+          a: sol([r`$X=B-A$ 이므로 같은 위치의 성분끼리 뺍니다.`], mat(X)) };
+      }
+    ],
+    3: [
+      () => {
+        const A = rndM(2, 2, -4, 4), B = rndM(2, 2, -4, 4);
+        if (Math.random() < 0.5) {
+          const Pm = madd(A, B), Q = madd(A, B, -1);
+          return { q: r`두 행렬 $A,\ B$ 에 대하여 $A+B=${mat(Pm)},\ A-B=${mat(Q)}$ 일 때, $A$ 와 $B$ 를 구하시오.`,
+            a: sol([r`두 식을 더하면 $2A=${mat(madd(Pm, Q))}$ 이므로 $A=${mat(A)}$`, r`$B=(A+B)-A$ 에서 $B=${mat(B)}$`], r`$A=${mat(A)},\ B=${mat(B)}$`, true) };
+        }
+        const Pm = madd(mscl(A, 2), B), Q = madd(A, B, -1);
+        return { q: r`두 행렬 $A,\ B$ 에 대하여 $2A+B=${mat(Pm)},\ A-B=${mat(Q)}$ 일 때, $A$ 와 $B$ 를 구하시오.`,
+          a: sol([r`두 식을 더하면 $3A=${mat(madd(Pm, Q))}$ 이므로 $A=${mat(A)}$`, r`$B=A-(A-B)$ 에서 $B=${mat(B)}$`], r`$A=${mat(A)},\ B=${mat(B)}$`, true) };
+      }
+    ]
+  };
+
+  const M2 = {
+    1: [
+      () => {
+        const A = rndM(2, 2, -2, 3), B = rndM(2, 2, -2, 3), M = mmul(A, B);
+        return { q: r`$A=${mat(A)},\ B=${mat(B)}$ 일 때, $AB$ 를 구하시오.`,
+          a: sol([r`$AB$ 의 $(i,j)$ 성분은 $A$ 의 $i$ 행과 $B$ 의 $j$ 열의 성분을 차례로 곱해 더한 값입니다.`, r`$(1,1)$ 성분: $${A[0][0]}\cdot${par(B[0][0])}+${par(A[0][1])}\cdot${par(B[1][0])}=${M[0][0]}$`], mat(M)) };
+      }
+    ],
+    2: [
+      () => {
+        const A = rndM(2, 3, -2, 3), B = rndM(3, 2, -2, 3), M = mmul(A, B);
+        return { q: r`$A=${mat(A)},\ B=${mat(B)}$ 일 때, $AB$ 를 구하시오.`,
+          a: sol([r`$A$ 는 $2\times3$, $B$ 는 $3\times2$ 행렬이므로 $AB$ 는 $2\times2$ 행렬입니다.`], mat(M)) };
+      },
+      () => {
+        const A = rndM(2, 2, -3, 3), M = mmul(A, A);
+        return { q: r`$A=${mat(A)}$ 일 때, $A^2$ 을 구하시오.`, a: sol([r`$A^2=A\cdot A$ 를 계산합니다.`], mat(M)) };
+      },
+      () => {
+        const A = rndM(2, 2, -2, 3), B = rndM(2, 2, -2, 3);
+        return { q: r`$A=${mat(A)},\ B=${mat(B)}$ 일 때, $AB$ 와 $BA$ 를 각각 구하시오.`,
+          a: sol([r`$AB=${mat(mmul(A, B))}$`, r`$BA=${mat(mmul(B, A))}$`], r`$AB=${mat(mmul(A, B))},\ BA=${mat(mmul(B, A))}$`, true) };
+      }
+    ],
+    3: [
+      () => {
+        const k = nz(-3, 3), n = R(10, 100);
+        return { q: r`$A=${mat([[1, k], [0, 1]])}$ 일 때, $A^{${n}}$ 을 구하시오.`,
+          a: sol([r`$A^2=${mat([[1, 2 * k], [0, 1]])},\ A^3=${mat([[1, 3 * k], [0, 1]])}$ 이므로 규칙을 찾으면 $A^n=\begin{pmatrix}1&${k}n\\0&1\end{pmatrix}$`], mat([[1, n * k], [0, 1]])) };
+      },
+      () => {
+        const n = R(10, 100), m = n % 4, A = [[0, -1], [1, 0]];
+        const res = [[[1, 0], [0, 1]], A, [[-1, 0], [0, -1]], [[0, 1], [-1, 0]]][m];
+        return { q: r`$A=${mat(A)}$ 일 때, $A^{${n}}$ 을 구하시오.`,
+          a: sol([r`$A^2=${mat([[-1, 0], [0, -1]])}=-E$,　$A^4=E$ ($E$ 는 단위행렬) 이므로 $4$ 개씩 반복됩니다.`, r`$${n}=4\times${Math.floor(n / 4)}+${m}$ 이므로 $A^{${n}}=A^{${m}}$ 과 같습니다.`], mat(res)) };
+      },
+      () => {
+        const a = pick([2, 3]), b = pick([-2, -1, 2]), n = R(3, 5);
+        return { q: r`$A=${mat([[a, 0], [0, b]])}$ 일 때, $A^{${n}}$ 을 구하시오.`,
+          a: sol([r`대각성분이 아닌 성분이 $0$ 이면 대각성분만 거듭제곱하면 됩니다.`], mat([[a ** n, 0], [0, b ** n]])) };
+      },
+      () => {
+        const A = rndM(2, 2, -2, 2), B = rndM(2, 2, -2, 2), D = madd(mmul(B, A), mmul(A, B), -1);
+        return { q: r`$A=${mat(A)},\ B=${mat(B)}$ 일 때, $(A+B)^2-(A^2+2AB+B^2)$ 을 구하시오.`,
+          a: sol([r`$(A+B)^2=A^2+AB+BA+B^2$ 이므로 주어진 식은 $BA-AB$ 입니다.`, r`$AB=${mat(mmul(A, B))},\ BA=${mat(mmul(B, A))}$`], mat(D)) };
+      }
+    ]
+  };
+
+  /* ───────── 5. 도형의 방정식 ───────── */
+
+  const pt = (n, x, y) => `\\mathrm{${n}}(${x},${y})`;
+  const TRI = [[3, 4, 5], [6, 8, 10], [5, 12, 13], [8, 15, 17]];
+  const sqx = (v, c) => c === 0 ? `${v}^2` : `(${v}${c > 0 ? '-' : '+'}${abs(c)})^2`;
+  const circ = (a, b, r2) => `${sqx('x', a)}+${sqx('y', b)}=${r2}`;
+
+  const G0 = {
+    1: [
+      () => {
+        const [x1, y1] = [R(-5, 5), R(-5, 5)];
+        let dx, dy;
+        if (Math.random() < 0.5) { const t = pick(TRI); [dx, dy] = Math.random() < 0.5 ? [t[0], t[1]] : [t[1], t[0]]; dx *= pick([1, -1]); dy *= pick([1, -1]); }
+        else { dx = nz(-5, 5); dy = nz(-5, 5); }
+        const d2 = dx * dx + dy * dy;
+        return { q: r`두 점 $${pt('A', x1, y1)},\ ${pt('B', x1 + dx, y1 + dy)}$ 사이의 거리를 구하시오.`,
+          a: sol([r`$\overline{\mathrm{AB}}=\sqrt{(${x1 + dx}-${par(x1)})^2+(${y1 + dy}-${par(y1)})^2}=\sqrt{${dx * dx}+${dy * dy}}=\sqrt{${d2}}$`], sqT(d2)) };
+      },
+      () => {
+        const [x1, y1] = [R(-5, 5), R(-5, 5)], [hx, hy] = [nz(-4, 4), nz(-4, 4)];
+        return { q: r`두 점 $${pt('A', x1, y1)},\ ${pt('B', x1 + 2 * hx, y1 + 2 * hy)}$ 을 이은 선분 $\mathrm{AB}$ 의 중점의 좌표를 구하시오.`,
+          a: sol([r`중점은 $\left(\dfrac{x_1+x_2}{2},\ \dfrac{y_1+y_2}{2}\right)$ 입니다.`], `(${x1 + hx},\\ ${y1 + hy})`) };
+      }
+    ],
+    2: [
+      () => {
+        const m = R(1, 4), n = R(1, 4), A = [R(-5, 5), R(-5, 5)], d = [nz(-3, 3), nz(-3, 3)];
+        const B = [A[0] + (m + n) * d[0], A[1] + (m + n) * d[1]], Pt = [A[0] + m * d[0], A[1] + m * d[1]];
+        return { q: r`두 점 $${pt('A', ...A)},\ ${pt('B', ...B)}$ 에 대하여 선분 $\mathrm{AB}$ 를 $${m}:${n}$ 으로 내분하는 점의 좌표를 구하시오.`,
+          a: sol([r`$x=\dfrac{${m}\cdot${par(B[0])}+${n}\cdot${par(A[0])}}{${m}+${n}}=${Pt[0]},\quad y=\dfrac{${m}\cdot${par(B[1])}+${n}\cdot${par(A[1])}}{${m}+${n}}=${Pt[1]}$`], `(${Pt[0]},\\ ${Pt[1]})`) };
+      },
+      () => {
+        const [m, n] = pick([[2, 1], [3, 1], [3, 2], [4, 1], [4, 3]]), A = [R(-5, 5), R(-5, 5)], d = [nz(-3, 3), nz(-3, 3)];
+        const B = [A[0] + (m - n) * d[0], A[1] + (m - n) * d[1]], Pt = [A[0] + m * d[0], A[1] + m * d[1]];
+        return { q: r`두 점 $${pt('A', ...A)},\ ${pt('B', ...B)}$ 에 대하여 선분 $\mathrm{AB}$ 를 $${m}:${n}$ 으로 외분하는 점의 좌표를 구하시오.`,
+          a: sol([r`외분점은 $\left(\dfrac{mx_2-nx_1}{m-n},\ \dfrac{my_2-ny_1}{m-n}\right)$ 입니다.`, r`$x=\dfrac{${m}\cdot${par(B[0])}-${n}\cdot${par(A[0])}}{${m}-${n}}=${Pt[0]},\quad y=\dfrac{${m}\cdot${par(B[1])}-${n}\cdot${par(A[1])}}{${m}-${n}}=${Pt[1]}$`], `(${Pt[0]},\\ ${Pt[1]})`) };
+      },
+      () => {
+        const A = [R(-5, 5), R(-5, 5)], B = [R(-5, 5), R(-5, 5)], G = [R(-3, 3), R(-3, 3)], Cc = [3 * G[0] - A[0] - B[0], 3 * G[1] - A[1] - B[1]];
+        return { q: r`세 점 $${pt('A', ...A)},\ ${pt('B', ...B)},\ ${pt('C', ...Cc)}$ 을 꼭짓점으로 하는 삼각형 $\mathrm{ABC}$ 의 무게중심의 좌표를 구하시오.`,
+          a: sol([r`무게중심은 $\left(\dfrac{x_1+x_2+x_3}{3},\ \dfrac{y_1+y_2+y_3}{3}\right)$ 입니다.`, r`$x=\dfrac{${A[0]}+${par(B[0])}+${par(Cc[0])}}{3}=${G[0]},\quad y=\dfrac{${A[1]}+${par(B[1])}+${par(Cc[1])}}{3}=${G[1]}$`], `(${G[0]},\\ ${G[1]})`) };
+      }
+    ],
+    3: [
+      () => {
+        let A, B, Cc;
+        do { A = [R(-4, 4), R(-4, 4)]; B = [R(-4, 4), R(-4, 4)]; Cc = [R(-4, 4), R(-4, 4)]; }
+        while ((B[0] - A[0]) * (Cc[1] - A[1]) - (B[1] - A[1]) * (Cc[0] - A[0]) === 0);
+        const D = [A[0] + Cc[0] - B[0], A[1] + Cc[1] - B[1]];
+        return { q: r`평행사변형 $\mathrm{ABCD}$ 에서 $${pt('A', ...A)},\ ${pt('B', ...B)},\ ${pt('C', ...Cc)}$ 일 때, 꼭짓점 $\mathrm{D}$ 의 좌표를 구하시오.`,
+          a: sol([r`평행사변형의 두 대각선 $\mathrm{AC},\ \mathrm{BD}$ 는 서로 다른 것을 이등분하므로 두 중점이 같습니다.`, r`$\mathrm{D}(x,y)$ 라 하면 $\dfrac{${A[0]}+${par(Cc[0])}}{2}=\dfrac{${B[0]}+x}{2},\ \dfrac{${A[1]}+${par(Cc[1])}}{2}=\dfrac{${B[1]}+y}{2}$`], `(${D[0]},\\ ${D[1]})`) };
+      },
+      () => {
+        const A = [R(-5, 5), R(-5, 5)], B = [R(-5, 5), R(-5, 5)], G = [R(-3, 3), R(-3, 3)], Cc = [3 * G[0] - A[0] - B[0], 3 * G[1] - A[1] - B[1]];
+        return { q: r`삼각형 $\mathrm{ABC}$ 의 두 꼭짓점이 $${pt('A', ...A)},\ ${pt('B', ...B)}$ 이고 무게중심이 $\mathrm{G}(${G[0]},\ ${G[1]})$ 일 때, 꼭짓점 $\mathrm{C}$ 의 좌표를 구하시오.`,
+          a: sol([r`$\mathrm{C}(a,b)$ 라 하면 $\dfrac{${A[0]}+${par(B[0])}+a}{3}=${G[0]},\ \dfrac{${A[1]}+${par(B[1])}+b}{3}=${G[1]}$`, r`$a=${3 * G[0]}-${par(A[0] + B[0])}=${Cc[0]},\quad b=${3 * G[1]}-${par(A[1] + B[1])}=${Cc[1]}$`], `(${Cc[0]},\\ ${Cc[1]})`) };
+      },
+      () => {
+        let a, b, c, d;
+        do { [a, b, c, d] = [R(-5, 5), nz(-5, 5), R(-5, 5), nz(-5, 5)]; } while (a === c);
+        const x = F(c * c + d * d - a * a - b * b, 2 * (c - a));
+        return { q: r`$x$ 축 위의 점 $\mathrm{P}$ 에서 두 점 $${pt('A', a, b)},\ ${pt('B', c, d)}$ 에 이르는 거리가 같을 때, 점 $\mathrm{P}$ 의 좌표를 구하시오.`,
+          a: sol([r`$\mathrm{P}(x,0)$ 이라 하면 $\overline{\mathrm{PA}}^2=\overline{\mathrm{PB}}^2$ 에서 $(x-${par(a)})^2+${b * b}=(x-${par(c)})^2+${d * d}$`, r`정리하면 $${expr([[-2 * a, 'x'], [a * a + b * b, '']])}=${expr([[-2 * c, 'x'], [c * c + d * d, '']])}$`], `\\left(${ftex(x)},\\ 0\\right)`) };
+      }
+    ]
+  };
+
+  const G1 = {
+    1: [
+      () => {
+        const [x1, y1] = [R(-5, 5), R(-5, 5)], dx = nz(-4, 4), dy = R(-6, 6);
+        const m = F(dy, dx);
+        return { q: r`두 점 $${pt('A', x1, y1)},\ ${pt('B', x1 + dx, y1 + dy)}$ 를 지나는 직선의 기울기를 구하시오.`,
+          a: sol([r`기울기 $=\dfrac{y_2-y_1}{x_2-x_1}=\dfrac{${y1 + dy}-${par(y1)}}{${x1 + dx}-${par(x1)}}=\dfrac{${dy}}{${dx}}$`], ftex(m)) };
+      },
+      () => {
+        const m = nz(-4, 4), [x1, y1] = [R(-4, 4), R(-4, 4)];
+        return { q: r`점 $(${x1},\ ${y1})$ 을 지나고 기울기가 $${m}$ 인 직선의 방정식을 $y=ax+b$ 꼴로 구하시오.`,
+          a: sol([r`$y-${par(y1)}=${m}(x-${par(x1)})$`, r`정리하면 $y=${lin(m, y1 - m * x1)}$`], `y=${lin(m, y1 - m * x1)}`) };
+      }
+    ],
+    2: [
+      () => {
+        const m = nz(-4, 4), n = R(-5, 5), [x1, y1] = [R(-4, 4), R(-4, 4)], par_ = Math.random() < 0.5;
+        const sl = par_ ? F(m) : F(-1, m), ic = par_ ? F(y1 - m * x1) : fadd(F(y1), F(x1, m));
+        return { q: r`직선 $y=${lin(m, n)}$ 에 ${par_ ? '평행' : '수직'}하고 점 $(${x1},\ ${y1})$ 을 지나는 직선의 방정식을 구하시오.`,
+          a: sol([par_ ? r`평행한 직선은 기울기가 같으므로 기울기는 $${m}$` : r`수직인 두 직선의 기울기의 곱은 $-1$ 이므로 기울기는 $${ftex(sl)}$`, r`점 $(${x1},\ ${y1})$ 을 지나므로 $y-${par(y1)}=${ftex(sl)}(x-${par(x1)})$`], lineY(sl, ic)) };
+      },
+      () => {
+        const t = pick(TRI), [a0, b0] = Math.random() < 0.5 ? [t[0], t[1]] : [t[1], t[0]], a = a0 * pick([1, -1]), b = b0 * pick([1, -1]), h = t[2];
+        const c = R(-10, 10), [x1, y1] = [R(-5, 5), R(-5, 5)], num = abs(a * x1 + b * y1 + c), d = F(num, h);
+        return { q: r`점 $(${x1},\ ${y1})$ 에서 직선 $${expr([[a, 'x'], [b, 'y'], [c, '']])}=0$ 까지의 거리를 구하시오.`,
+          a: sol([r`$d=\dfrac{|${a}\cdot${par(x1)}+${b}\cdot${par(y1)}${sg(c)}|}{\sqrt{${a}^2+${b}^2}}=\dfrac{${num}}{${h}}$`], ftex(d)) };
+      }
+    ],
+    3: [
+      () => {
+        let x1, y1, x2, y2;
+        do { [x1, y1, x2, y2] = [R(-4, 4), R(-4, 4), R(-4, 4), R(-4, 4)]; } while (x1 === x2 || y1 === y2);
+        const y3 = R(-6, 6), k = fadd(F(x1), fdiv(F((y3 - y1) * (x2 - x1)), F(y2 - y1)));
+        return { q: r`세 점 $${pt('A', x1, y1)},\ ${pt('B', x2, y2)},\ \mathrm{C}(k,\ ${y3})$ 가 한 직선 위에 있도록 하는 $k$ 의 값을 구하시오.`,
+          a: sol([r`(직선 $\mathrm{AB}$ 의 기울기) $=$ (직선 $\mathrm{AC}$ 의 기울기) 이어야 합니다.`, r`$\dfrac{${y2}-${par(y1)}}{${x2}-${par(x1)}}=\dfrac{${y3}-${par(y1)}}{k-${par(x1)}}$ 를 풉니다.`], `k=${ftex(k)}`) };
+      },
+      () => {
+        let rr, ss, p, q;
+        do { [rr, ss] = distinct(-4, 4, 2, true); p = R(-4, 4); q = R(-4, 4); } while (p === rr * q || p === ss * q);
+        const c = rr + ss, prod = rr * ss, lo = Math.min(rr, ss), hi = Math.max(rr, ss), isPar = Math.random() < 0.5;
+        const tail = n => n === 0 ? '' : sg(n);
+        if (isPar)
+          return { q: r`두 직선 $${cat('kx', expr([[-prod, 'y'], [p, '']]))}=0,\ x+(${lin(1, -c, 'k')})y${tail(q)}=0$ 이 서로 평행할 때, 실수 $k$ 의 값을 모두 구하시오.`,
+            a: sol([r`평행 조건 $\dfrac{a}{a'}=\dfrac{b}{b'}\ne\dfrac{c}{c'}$ 에서 $k(k-${c})=${-prod}\cdot1$ 즉 $${poly([1, -c, prod], 'k')}=0$`, r`$${facs([rr, ss], 'k')}=0$ 이므로 $k=${lo}$ 또는 $k=${hi}$ (두 직선이 일치하는 경우는 없음)`], `k=${lo}\\text{ 또는 }k=${hi}`) };
+        return { q: r`두 직선 $kx+y${tail(p)}=0,\ ${cat(`(${lin(1, -c, 'k')})x`, expr([[prod, 'y'], [q, '']]))}=0$ 이 서로 수직일 때, 실수 $k$ 의 값을 모두 구하시오.`,
+          a: sol([r`수직 조건 $aa'+bb'=0$ 에서 $k(k-${c})+${prod}=0$ 즉 $${poly([1, -c, prod], 'k')}=0$`, r`$${facs([rr, ss], 'k')}=0$ 이므로 $k=${lo}$ 또는 $k=${hi}$`], `k=${lo}\\text{ 또는 }k=${hi}`) };
+      },
+      () => {
+        const t = pick(TRI), [a0, b0] = Math.random() < 0.5 ? [t[0], t[1]] : [t[1], t[0]], a = a0 * pick([1, -1]), b = b0 * pick([1, -1]), h = t[2];
+        const [x1, y1] = [R(-4, 4), R(-4, 4)], d = R(1, 4), base = -(a * x1 + b * y1), k1 = base - d * h, k2 = base + d * h;
+        return { q: r`점 $(${x1},\ ${y1})$ 에서 직선 $${cat(expr([[a, 'x'], [b, 'y']]), 'k')}=0$ 까지의 거리가 $${d}$ 일 때, 상수 $k$ 의 값을 모두 구하시오.`,
+          a: sol([r`$\dfrac{|${a}\cdot${par(x1)}+${b}\cdot${par(y1)}+k|}{\sqrt{${a}^2+${b}^2}}=\dfrac{|k${sg(a * x1 + b * y1)}|}{${h}}=${d}$`, r`$|k${sg(a * x1 + b * y1)}|=${d * h}$ 이므로 $k${sg(a * x1 + b * y1)}=\pm${d * h}$`], `k=${k1}\\text{ 또는 }k=${k2}`) };
+      }
+    ]
+  };
+
+  const G2 = {
+    1: [
+      () => {
+        const [a, b] = [R(-5, 5), R(-5, 5)], rr = R(1, 7);
+        return { q: r`중심이 $(${a},\ ${b})$ 이고 반지름의 길이가 $${rr}$ 인 원의 방정식을 구하시오.`,
+          a: sol([r`$(x-a)^2+(y-b)^2=r^2$ 에 대입합니다.`], circ(a, b, rr * rr)) };
+      },
+      () => {
+        const [a, b] = [R(-5, 5), R(-5, 5)], sqr = Math.random() < 0.5, r2 = sqr ? R(1, 6) ** 2 : pick([2, 3, 5, 6, 7, 8]);
+        return { q: r`원 $${circ(a, b, r2)}$ 의 중심의 좌표와 반지름의 길이를 구하시오.`,
+          a: sol([r`$(x-a)^2+(y-b)^2=r^2$ 꼴과 비교합니다.`], r`중심 $(${a},\ ${b})$, 반지름 $${sqT(r2)}$`, true) };
+      }
+    ],
+    2: [
+      () => {
+        const [a, b] = [R(-4, 4), R(-4, 4)], rr = R(1, 6), Cc = a * a + b * b - rr * rr;
+        return { q: r`원 $${cat('x^2+y^2', expr([[-2 * a, 'x'], [-2 * b, 'y'], [Cc, '']]))}=0$ 의 중심의 좌표와 반지름의 길이를 구하시오.`,
+          a: sol([r`완전제곱식으로 고칩니다.`, r`$${circ(a, b, rr * rr)}$ 이므로`], r`중심 $(${a},\ ${b})$, 반지름 $${rr}$`, true) };
+      },
+      () => {
+        const [a, b] = [nz(-5, 5), nz(-5, 5)], xAxis = Math.random() < 0.5, rr = abs(xAxis ? b : a);
+        return { q: r`중심이 $(${a},\ ${b})$ 이고 ${xAxis ? '$x$' : '$y$'}축에 접하는 원의 방정식을 구하시오.`,
+          a: sol([xAxis ? r`$x$ 축에 접하면 (반지름) $=$ (중심의 $y$ 좌표의 절댓값) $=${rr}$` : r`$y$ 축에 접하면 (반지름) $=$ (중심의 $x$ 좌표의 절댓값) $=${rr}$`], circ(a, b, rr * rr)) };
+      },
+      () => {
+        const t = pick(TRI), [a0, b0] = Math.random() < 0.5 ? [t[0], t[1]] : [t[1], t[0]], A = a0 * pick([1, -1]), B = b0 * pick([1, -1]), h = t[2];
+        const [a, b] = [R(-4, 4), R(-4, 4)], c = R(-8, 8), num = abs(A * a + B * b + c), rr = F(num, h);
+        if (num === 0) return G2[2][2]();
+        return { q: r`중심이 $(${a},\ ${b})$ 이고 직선 $${expr([[A, 'x'], [B, 'y'], [c, '']])}=0$ 에 접하는 원의 반지름의 길이를 구하시오.`,
+          a: sol([r`접하므로 (반지름) $=$ (중심과 직선 사이의 거리) 입니다.`, r`$\dfrac{|${A}\cdot${par(a)}+${B}\cdot${par(b)}${sg(c)}|}{\sqrt{${A}^2+${B}^2}}=\dfrac{${num}}{${h}}$`], ftex(rr)) };
+      }
+    ],
+    3: [
+      () => {
+        const m = pick([1, 2, 3, -1, -2]), rr = R(1, 4), k2 = rr * rr * (m * m + 1);
+        return { q: r`직선 $y=${expr([[m, 'x']])}+k$ 가 원 $x^2+y^2=${rr * rr}$ 에 접할 때, 상수 $k$ 의 값을 모두 구하시오.`,
+          a: sol([r`직선 $${expr([[m, 'x'], [-1, 'y'], [1, 'k']])}=0$ 과 원의 중심 $(0,0)$ 사이의 거리가 반지름 $${rr}$ 과 같습니다.`, r`$\dfrac{|k|}{\sqrt{${m}^2+1}}=\dfrac{|k|}{\sqrt{${m * m + 1}}}=${rr}$ 이므로 $|k|=${rr}\sqrt{${m * m + 1}}$`], `k=\\pm${sqT(k2)}`) };
+      },
+      () => {
+        const o = pick([[3, 4, 5], [4, 3, 5], [5, 12, 13], [12, 5, 13], [6, 8, 10], [8, 15, 17], [0, 4, 4], [5, 0, 5], [0, 7, 7]]);
+        const sx = pick([1, -1]), sy = pick([1, -1]), x1 = o[0] * sx, y1 = o[1] * sy, r2 = o[2] * o[2];
+        return { q: r`원 $x^2+y^2=${r2}$ 위의 점 $(${x1},\ ${y1})$ 에서의 접선의 방정식을 구하시오.`,
+          a: sol([r`원 $x^2+y^2=r^2$ 위의 점 $(x_1,y_1)$ 에서의 접선의 방정식은 $x_1x+y_1y=r^2$ 입니다.`], `${expr([[x1, 'x'], [y1, 'y']])}=${r2}`) };
+      },
+      () => {
+        const [a, b] = [R(-4, 4), R(-4, 4)], [hx, hy] = [nz(-4, 4), nz(-4, 4)], A = [a - hx, b - hy], B = [a + hx, b + hy], r2 = hx * hx + hy * hy;
+        return { q: r`두 점 $${pt('A', ...A)},\ ${pt('B', ...B)}$ 를 지름의 양 끝점으로 하는 원의 방정식을 구하시오.`,
+          a: sol([r`중심은 선분 $\mathrm{AB}$ 의 중점: $(${a},\ ${b})$`, r`반지름의 제곱은 (중심과 $\mathrm{A}$ 사이 거리)$^2=(${par(A[0])}-${par(a)})^2+(${par(A[1])}-${par(b)})^2=${r2}$`], circ(a, b, r2)) };
+      }
+    ]
+  };
+
+  const G3 = {
+    1: [
+      () => {
+        const [a, b, m, n] = [R(-5, 5), R(-5, 5), nz(-4, 4), nz(-4, 4)];
+        return { q: r`점 $(${a},\ ${b})$ 를 $x$ 축의 방향으로 $${m}$ 만큼, $y$ 축의 방향으로 $${n}$ 만큼 평행이동한 점의 좌표를 구하시오.`,
+          a: sol([r`$(x,y)\to(x+m,\ y+n)$ 입니다.`], `(${a + m},\\ ${b + n})`) };
+      },
+      () => {
+        const [a, b] = [nz(-6, 6), nz(-6, 6)], t = pick([0, 1, 2, 3]);
+        const o = [['$x$ 축', `(${a},\\ ${-b})`], ['$y$ 축', `(${-a},\\ ${b})`], ['원점', `(${-a},\\ ${-b})`], ['직선 $y=x$', `(${b},\\ ${a})`]][t];
+        return { q: r`점 $(${a},\ ${b})$ 를 ${o[0]}에 대하여 대칭이동한 점의 좌표를 구하시오.`,
+          a: sol([['$y$ 좌표의 부호만 바뀝니다.', '$x$ 좌표의 부호만 바뀝니다.', '$x,\\ y$ 좌표의 부호가 모두 바뀝니다.', '$x,\\ y$ 좌표를 서로 바꿉니다.'][t]], o[1]) };
+      }
+    ],
+    2: [
+      () => {
+        const m = nz(-4, 4), c = R(-5, 5), [p, q] = [nz(-4, 4), nz(-4, 4)], res = -m * p + c + q;
+        return { q: r`직선 $y=${lin(m, c)}$ 을 $x$ 축의 방향으로 $${p}$ 만큼, $y$ 축의 방향으로 $${q}$ 만큼 평행이동한 직선의 방정식을 구하시오.`,
+          a: sol([r`$x$ 대신 $x-${par(p)}$, $y$ 대신 $y-${par(q)}$ 를 대입합니다.`, r`$y-${par(q)}=${m}(x-${par(p)})${sg(c)}$`], `y=${lin(m, res)}`) };
+      },
+      () => {
+        const b = R(-4, 4), c = R(-4, 4), [p, q] = [nz(-3, 3), nz(-4, 4)];
+        const res = [1, b - 2 * p, p * p - b * p + c + q];
+        return { q: r`포물선 $y=${poly([1, b, c])}$ 을 $x$ 축의 방향으로 $${p}$ 만큼, $y$ 축의 방향으로 $${q}$ 만큼 평행이동한 포물선의 방정식을 구하시오.`,
+          a: sol([r`$x$ 대신 $x-${par(p)}$, $y$ 대신 $y-${par(q)}$ 를 대입합니다.`, r`$y-${par(q)}=(x-${par(p)})^2${b ? sg(b) + '(x-' + par(p) + ')' : ''}${sg(c)}$ 를 전개하여 정리합니다.`], `y=${poly(res)}`) };
+      },
+      () => {
+        const [a, b] = [R(-4, 4), R(-4, 4)], rr = R(1, 5), [p, q] = [nz(-4, 4), nz(-4, 4)];
+        return { q: r`원 $${circ(a, b, rr * rr)}$ 을 $x$ 축의 방향으로 $${p}$ 만큼, $y$ 축의 방향으로 $${q}$ 만큼 평행이동한 원의 방정식을 구하시오.`,
+          a: sol([r`평행이동하면 원의 중심만 $(${a},${b})\to(${a + p},${b + q})$ 로 옮겨지고 반지름은 그대로입니다.`], circ(a + p, b + q, rr * rr)) };
+      }
+    ],
+    3: [
+      () => {
+        const a = nz(-4, 4), b = nz(-4, 4), c = R(-6, 6), t = pick([0, 1, 2, 3]);
+        const name = ['$x$ 축', '$y$ 축', '원점', '직선 $y=x$'][t], rep = ['$y$ 대신 $-y$', '$x$ 대신 $-x$', '$x$ 대신 $-x$, $y$ 대신 $-y$', '$x$ 와 $y$ 를 서로 바꿈'][t];
+        const co = [[a, -b], [-a, b], [-a, -b], [b, a]][t];
+        return { q: r`직선 $${expr([[a, 'x'], [b, 'y'], [c, '']])}=0$ 을 ${name}에 대하여 대칭이동한 직선의 방정식을 구하시오.`,
+          a: sol([r`${rep}를 대입합니다.`], `${expr([[co[0], 'x'], [co[1], 'y'], [c, '']])}=0`) };
+      },
+      () => {
+        const b = R(-4, 4), c = R(-4, 4), t = pick([0, 1, 2]);
+        const name = ['$x$ 축', '$y$ 축', '원점'][t];
+        const res = [[-1, -b, -c], [1, -b, c], [-1, b, -c]][t];
+        const rep = [r`$y$ 대신 $-y$ 를 대입하면 $-y=${poly([1, b, c])}$ 이므로 양변에 $-1$ 을 곱합니다.`, r`$x$ 대신 $-x$ 를 대입합니다.`, r`$x$ 대신 $-x$, $y$ 대신 $-y$ 를 대입한 뒤 양변에 $-1$ 을 곱합니다.`][t];
+        return { q: r`포물선 $y=${poly([1, b, c])}$ 을 ${name}에 대하여 대칭이동한 포물선의 방정식을 구하시오.`,
+          a: sol([rep], `y=${poly(res)}`) };
+      },
+      () => {
+        const [a, b] = [R(-5, 5), R(-5, 5)], [p, q] = [nz(-4, 4), nz(-4, 4)], t = pick([0, 1, 2]);
+        const mx = [a + p, b + q];
+        const nm = ['$x$ 축', '$y$ 축', '직선 $y=x$'][t], res = [[mx[0], -mx[1]], [-mx[0], mx[1]], [mx[1], mx[0]]][t];
+        return { q: r`점 $(${a},\ ${b})$ 를 $x$ 축의 방향으로 $${p}$ 만큼, $y$ 축의 방향으로 $${q}$ 만큼 평행이동한 다음 ${nm}에 대하여 대칭이동한 점의 좌표를 구하시오.`,
+          a: sol([r`평행이동: $(${a},\ ${b})\to(${mx[0]},\ ${mx[1]})$`, r`${nm}에 대한 대칭이동: $(${mx[0]},\ ${mx[1]})\to(${res[0]},\ ${res[1]})$`], `(${res[0]},\\ ${res[1]})`) };
+      }
+    ]
+  };
+
+  Object.assign(window.GEN, {
+    counting: [K0, K1, K2],
+    matrix: [M0, M1, M2],
+    geometry: [G0, G1, G2, G3]
+  });
+})();
+
+  </script>
+  <script>
+/* 문제 생성기 ③ 집합과 명제 · 함수와 그래프 */
+(function () {
+  const { r, R, pick, nz, abs, gcd, shuffle, distinct, F, fadd, fsub, fmul, fdiv, ftex, expr, poly, lin, par, sg, cat, facs, sqT, sol, setT, subset, P, fact, lineY } = window.H;
+
+  /* ───────── 6. 집합과 명제 ───────── */
+
+  const U10 = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  const UT = r`전체집합 $U=\{1,2,3,\cdots,10\}$`;
+  const uni = (a, b) => [...new Set([...a, ...b])].sort((x, y) => x - y);
+  const inter = (a, b) => a.filter(x => b.includes(x));
+  const diff = (a, b) => a.filter(x => !b.includes(x));
+  const comp = a => diff(U10, a);
+
+  const S0 = {
+    1: [
+      () => {
+        const A = subset(U10, R(3, 6)), B = subset(U10, R(3, 6)), t = pick([0, 1, 2, 3]);
+        const o = [[r`A\cup B`, uni(A, B), r`합집합은 $A$ 또는 $B$ 에 속하는 원소 전체입니다.`],
+          [r`A\cap B`, inter(A, B), r`교집합은 $A$ 와 $B$ 에 모두 속하는 원소입니다.`],
+          [r`A-B`, diff(A, B), r`차집합 $A-B$ 는 $A$ 에는 속하고 $B$ 에는 속하지 않는 원소입니다.`],
+          [r`A^{c}`, comp(A), r`여집합 $A^c$ 는 전체집합에서 $A$ 의 원소를 뺀 나머지입니다.`]][t];
+        return { q: r`${UT} 의 두 부분집합 $A=${setT(A)},\ B=${setT(B)}$ 에 대하여 $${o[0]}$ 을 구하시오.`, a: sol([o[2]], setT(o[1])) };
+      }
+    ],
+    2: [
+      () => {
+        const A = subset(U10, R(3, 6)), B = subset(U10, R(3, 6)), t = Math.random() < 0.5;
+        const ans = t ? comp(uni(A, B)) : comp(inter(A, B));
+        return { q: r`${UT} 의 두 부분집합 $A=${setT(A)},\ B=${setT(B)}$ 에 대하여 $${t ? r`(A\cup B)^c` : r`(A\cap B)^c`}$ 을 구하시오.`,
+          a: sol([t ? r`$A\cup B=${setT(uni(A, B))}$ 이므로 그 여집합을 구합니다. (드모르간: $(A\cup B)^c=A^c\cap B^c$)` : r`$A\cap B=${setT(inter(A, B))}$ 이므로 그 여집합을 구합니다. (드모르간: $(A\cap B)^c=A^c\cup B^c$)`], setT(ans)) };
+      },
+      () => {
+        const both = R(2, 8), oa = R(3, 10), ob = R(3, 10), none = R(1, 6), N = oa + ob + both + none, a = oa + both, b = ob + both;
+        return { q: r`학생 ${N}명 중에서 수학을 좋아하는 학생이 ${a}명, 영어를 좋아하는 학생이 ${b}명이고, 두 과목 모두 좋아하지 않는 학생이 ${none}명이다. 수학과 영어를 모두 좋아하는 학생 수를 구하시오.`,
+          a: sol([r`적어도 한 과목을 좋아하는 학생: $n(A\cup B)=${N}-${none}=${N - none}$`, r`$n(A\cap B)=n(A)+n(B)-n(A\cup B)=${a}+${b}-${N - none}=${both}$`], both) };
+      }
+    ],
+    3: [
+      () => {
+        const N = R(20, 40), a = R(10, N - 3), b = R(10, N - 3), mx = Math.min(a, b), mn = Math.max(0, a + b - N);
+        return { q: r`$n(U)=${N},\ n(A)=${a},\ n(B)=${b}$ 일 때, $n(A\cap B)$ 의 최댓값과 최솟값을 구하시오.`,
+          a: sol([r`최댓값: 작은 집합이 큰 집합에 포함될 때이므로 $\min(${a},${b})=${mx}$`, r`최솟값: $n(A\cup B)\le n(U)$ 에서 $n(A\cap B)=${a}+${b}-n(A\cup B)\ge${a}+${b}-${N}=${a + b - N}$` + (a + b - N < 0 ? r` 이고 $n(A\cap B)\ge0$ 이므로 $0$` : '')], r`최댓값 $${mx}$, 최솟값 $${mn}$`, true) };
+      },
+      () => {
+        const [x1, x2, x3] = [R(2, 6), R(2, 6), R(2, 6)], [y12, y13, y23] = [R(1, 4), R(1, 4), R(1, 4)], z = R(1, 3);
+        const A = x1 + y12 + y13 + z, B = x2 + y12 + y23 + z, Cc = x3 + y13 + y23 + z, tot = x1 + x2 + x3 + y12 + y13 + y23 + z;
+        return { q: r`$n(A)=${A},\ n(B)=${B},\ n(C)=${Cc},\ n(A\cap B)=${y12 + z},\ n(B\cap C)=${y23 + z},\ n(C\cap A)=${y13 + z},\ n(A\cap B\cap C)=${z}$ 일 때, $n(A\cup B\cup C)$ 를 구하시오.`,
+          a: sol([r`$n(A\cup B\cup C)=n(A)+n(B)+n(C)-n(A\cap B)-n(B\cap C)-n(C\cap A)+n(A\cap B\cap C)$`, r`$=${A}+${B}+${Cc}-${y12 + z}-${y23 + z}-${y13 + z}+${z}=${tot}$`], tot) };
+      }
+    ]
+  };
+
+  const S1 = {
+    1: [
+      () => {
+        const n = R(3, 9), set = Array.from({ length: n }, (_, i) => i + 1);
+        if (Math.random() < 0.5)
+          return { q: r`집합 $A=${setT(set)}$ 의 부분집합의 개수를 구하시오.`, a: sol([r`원소가 $${n}$ 개이므로 $2^{${n}}=${2 ** n}$`], 2 ** n) };
+        return { q: r`집합 $A=${setT(set)}$ 의 진부분집합의 개수를 구하시오.`, a: sol([r`부분집합은 $2^{${n}}=${2 ** n}$ 개이고, 진부분집합은 자기 자신을 뺀 것이므로 $2^{${n}}-1=${2 ** n - 1}$`], 2 ** n - 1) };
+      },
+      () => {
+        const n = R(3, 12);
+        return { q: r`원소가 ${n}개인 집합의 부분집합의 개수를 구하시오.`, a: sol([r`$2^{${n}}=${2 ** n}$`], 2 ** n) };
+      }
+    ],
+    2: [
+      () => {
+        const n = R(5, 9), inc = R(1, 2), exc = R(0, 2), pool = shuffle(Array.from({ length: n }, (_, i) => i + 1));
+        const I = pool.slice(0, inc).sort((x, y) => x - y), E = pool.slice(inc, inc + exc).sort((x, y) => x - y), k = inc + exc;
+        const cond = (inc ? `원소 ${I.join(', ')} 를 반드시 포함` : '') + (inc && exc ? '하고 ' : '') + (exc ? `원소 ${E.join(', ')} 를 포함하지 않는` : (inc ? '하는' : ''));
+        return { q: r`집합 $A=${setT(Array.from({ length: n }, (_, i) => i + 1))}$ 의 부분집합 중 ${cond} 부분집합의 개수를 구하시오.`,
+          a: sol([r`정해진 원소 ${k}개는 넣을지 말지 선택할 수 없으므로, 나머지 $${n}-${k}=${n - k}$ 개의 원소만 선택합니다.`, r`$2^{${n - k}}=${2 ** (n - k)}$`], 2 ** (n - k)) };
+      }
+    ],
+    3: [
+      () => {
+        const n = R(5, 8), k = R(1, 3), A = Array.from({ length: k }, (_, i) => i + 1), Bt = Array.from({ length: n }, (_, i) => i + 1);
+        return { q: r`두 집합 $A=${setT(A)},\ B=${setT(Bt)}$ 에 대하여 $A\subset X\subset B$ 를 만족하는 집합 $X$ 의 개수를 구하시오.`,
+          a: sol([r`$X$ 는 $A$ 의 원소 ${k}개를 반드시 포함하고, $B$ 의 나머지 $${n - k}$ 개 원소는 넣을지 말지 자유롭게 정할 수 있습니다.`, r`$2^{${n - k}}=${2 ** (n - k)}$`], 2 ** (n - k)) };
+      },
+      () => {
+        const n = R(5, 9), e = Math.floor(n / 2), v = 2 ** n - 2 ** e;
+        return { q: r`집합 $A=${setT(Array.from({ length: n }, (_, i) => i + 1))}$ 의 부분집합 중 홀수인 원소를 적어도 한 개 포함하는 것의 개수를 구하시오.`,
+          a: sol([r`여사건(홀수를 하나도 포함하지 않는 경우 = 짝수만으로 이루어진 부분집합)을 이용합니다.`, r`전체: $2^{${n}}=${2 ** n}$,　짝수($${e}$ 개)만 고르는 경우: $2^{${e}}=${2 ** e}$`, r`$${2 ** n}-${2 ** e}=${v}$`], v) };
+      },
+      () => {
+        const n = R(4, 8);
+        return { q: r`집합 $A=${setT(Array.from({ length: n }, (_, i) => i + 1))}$ 의 부분집합 중 원소의 개수가 짝수인 것(공집합 포함)의 개수를 구하시오.`,
+          a: sol([r`원소 $${n - 1}$ 개는 마음대로 넣거나 빼고, 마지막 원소는 전체 개수가 짝수가 되도록 정하면 됩니다.`, r`$2^{${n - 1}}=${2 ** (n - 1)}$`], 2 ** (n - 1)) };
+      }
+    ]
+  };
+
+  const MULT = [2, 3, 4, 6, 8, 9, 12];
+  const COND = ['충분조건이지만 필요조건은 아니다', '필요조건이지만 충분조건은 아니다', '필요충분조건이다', '충분조건도 필요조건도 아니다'];
+  const rel = (P1, Q1) => { // 진리집합이 구간일 때 포함관계 (열린구간)
+    const pq = Q1[0] <= P1[0] && P1[1] <= Q1[1], qp = P1[0] <= Q1[0] && Q1[1] <= P1[1];
+    return pq && qp ? 2 : pq ? 0 : qp ? 1 : 3;
+  };
+
+  const S2 = {
+    1: [
+      () => {
+        let n, m; do { n = pick(MULT); m = pick(MULT); } while (n === m);
+        const ok = n % m === 0, ask = Math.random() < 0.5;
+        if (ask)
+          return { q: r`다음 명제의 참, 거짓을 판별하고, 거짓이면 반례를 하나 드시오. 　「자연수 $x$ 가 ${n}의 배수이면 $x$ 는 ${m}의 배수이다.」`,
+            a: sol(ok ? [r`${n}의 배수는 모두 ${m}의 배수이므로 참입니다. ($${n}=${m}\times${n / m}$)`] : [r`$x=${n}$ 이면 ${n}의 배수이지만 ${m}의 배수는 아니므로 거짓입니다.`], ok ? '참' : `거짓 (반례: $x=${n}$)`, true) };
+        return { q: r`명제 「자연수 $x$ 가 ${n}의 배수이면 $x$ 는 ${m}의 배수이다.」 의 대우를 쓰고, 그 참, 거짓을 판별하시오.`,
+          a: sol([r`대우: 「$x$ 가 ${m}의 배수가 아니면 $x$ 는 ${n}의 배수가 아니다.」`, r`명제와 그 대우의 참, 거짓은 항상 같습니다. 원래 명제가 ${ok ? '참' : '거짓'}이므로 대우도 ${ok ? '참' : '거짓'}입니다.`], `대우는 ${ok ? '참' : '거짓'}`, true) };
+      },
+      () => {
+        const [a, b] = distinct(-3, 6, 2), ok = a >= b;
+        return { q: r`다음 명제의 참, 거짓을 판별하고, 거짓이면 반례를 하나 드시오. 　「$x>${a}$ 이면 $x>${b}$ 이다.」`,
+          a: sol(ok ? [r`$x>${a}$ 인 수는 모두 $x>${b}$ 를 만족하므로 참입니다.`] : [r`$x=${b}$ 는 $x>${a}$ 를 만족하지만 $x>${b}$ 는 만족하지 않으므로 거짓입니다.`], ok ? '참' : `거짓 (반례: $x=${b}$)`, true) };
+      }
+    ],
+    2: [
+      () => {
+        let n, m; do { n = pick([2, 3, 4, 6, 8, 12]); m = pick([2, 3, 4, 6, 8, 12]); } while (n === m);
+        const k = n % m === 0 ? 0 : m % n === 0 ? 1 : 3;
+        return { q: r`$p$: $x$ 는 ${n}의 배수,　$q$: $x$ 는 ${m}의 배수 일 때, $p$ 는 $q$ 이기 위한 어떤 조건인지 말하시오.`,
+          a: sol([r`$P=\{${n}\text{의 배수}\},\ Q=\{${m}\text{의 배수}\}$`, k === 0 ? r`${n}의 배수는 모두 ${m}의 배수이므로 $P\subset Q$, 즉 $p\Rightarrow q$ 입니다. 역은 성립하지 않습니다.` : k === 1 ? r`${m}의 배수는 모두 ${n}의 배수이므로 $Q\subset P$, 즉 $q\Rightarrow p$ 입니다. $p\Rightarrow q$ 는 성립하지 않습니다.` : r`어느 쪽 포함관계도 성립하지 않으므로 $p\Rightarrow q,\ q\Rightarrow p$ 모두 거짓입니다.`], COND[k], true) };
+      },
+      () => {
+        const a = nz(-4, 4);
+        return { q: r`$p$: $x=${a}$,　$q$: $x^2=${a * a}$ 일 때, $p$ 는 $q$ 이기 위한 어떤 조건인지 말하시오.`,
+          a: sol([r`$p\Rightarrow q$ 는 참입니다. ($x=${a}$ 이면 $x^2=${a * a}$)`, r`$q\Rightarrow p$ 는 거짓입니다. (반례: $x=${-a}$ 이면 $x^2=${a * a}$ 이지만 $x\ne${a}$)`], COND[0], true) };
+      },
+      () => {
+        let a, b, c, d;
+        do { [a, b] = distinct(-5, 5, 2).sort((x, y) => x - y); [c, d] = distinct(-5, 5, 2).sort((x, y) => x - y); } while (a === c && b === d);
+        const k = rel([a, b], [c, d]), why = [r`$P\subset Q$ 이므로 $p\Rightarrow q$ (충분조건)`, r`$Q\subset P$ 이므로 $q\Rightarrow p$ (필요조건)`, '', r`$P\not\subset Q$ 이고 $Q\not\subset P$`][k];
+        return { q: r`$p$: $${a}<x<${b}$,　$q$: $${c}<x<${d}$ 일 때, $p$ 는 $q$ 이기 위한 어떤 조건인지 말하시오.`,
+          a: sol([r`진리집합을 수직선에 나타내어 포함관계를 봅니다. $P=(${a},${b}),\ Q=(${c},${d})$`, why], COND[k], true) };
+      }
+    ],
+    3: [
+      () => {
+        const al = R(-6, -1), be = R(2, 8), suff = Math.random() < 0.5;
+        let s, t;
+        do {
+          if (suff) { s = R(0, 3); t = R(0, 3); } else { s = R(1, 8); t = R(1, 8); }
+        } while (suff ? (s + t === 0 || al + s > be - t) : (be - al > s + t));
+        const klo = s === 0 ? 'k' : `k-${s}`, khi = t === 0 ? 'k' : `k+${t}`;
+        const lo = suff ? al + s : be - t, hi = suff ? be - t : al + s;
+        return { q: r`$p$: $${al}\le x\le ${be}$,　$q$: $${klo}\le x\le ${khi}$ 일 때, $q$ 가 $p$ 이기 위한 ${suff ? '충분' : '필요'}조건이 되도록 하는 실수 $k$ 의 값의 범위를 구하시오.`,
+          a: sol(suff
+            ? [r`$q\Rightarrow p$ 이어야 하므로 $Q\subset P$ 입니다.`, r`$${al}\le ${klo}$ 이고 $${khi}\le ${be}$`, r`$k\ge${al + s}$ 이고 $k\le${be - t}$`]
+            : [r`$q$ 가 $p$ 이기 위한 필요조건이려면 $p\Rightarrow q$ 이므로 $P\subset Q$ 입니다.`, r`$${klo}\le ${al}$ 이고 $${be}\le ${khi}$`, r`$k\le${al + s}$ 이고 $k\ge${be - t}$`],
+            `${lo}\\le k\\le ${hi}`) };
+      },
+      () => {
+        const al = R(-5, 2), be = al + R(2, 6), suff = Math.random() < 0.5;
+        return suff
+          ? { q: r`$p$: $${al}<x<${be}$,　$q$: $x<k$ 일 때, $p$ 가 $q$ 이기 위한 충분조건이 되도록 하는 실수 $k$ 의 최솟값을 구하시오.`,
+            a: sol([r`$P\subset Q$ 이려면 $P=(${al},${be})$ 가 $Q=(-\infty,k)$ 에 포함되어야 하므로 $${be}\le k$`], `${be}`) }
+          : { q: r`$p$: $${al}<x<${be}$,　$q$: $x>k$ 일 때, $p$ 가 $q$ 이기 위한 충분조건이 되도록 하는 실수 $k$ 의 최댓값을 구하시오.`,
+            a: sol([r`$P\subset Q$ 이려면 $P=(${al},${be})$ 가 $Q=(k,\infty)$ 에 포함되어야 하므로 $k\le ${al}$`], `${al}`) };
+      }
+    ]
+  };
+
+  const S3 = {
+    1: [
+      () => {
+        const t = R(1, 12), n = t * t;
+        if (Math.random() < 0.5)
+          return { q: r`$x>0$ 일 때, $x+\dfrac{${n}}{x}$ 의 최솟값을 구하시오.`,
+            a: sol([r`산술평균과 기하평균의 관계에서 $x+\dfrac{${n}}{x}\ge2\sqrt{x\cdot\dfrac{${n}}{x}}=2\sqrt{${n}}=${2 * t}$`, r`등호는 $x=\dfrac{${n}}{x}$, 즉 $x=${t}$ 일 때 성립합니다.`], 2 * t) };
+        return { q: r`$a>0,\ b>0$ 이고 $ab=${n}$ 일 때, $a+b$ 의 최솟값을 구하시오.`,
+          a: sol([r`$a+b\ge2\sqrt{ab}=2\sqrt{${n}}=${2 * t}$`, r`등호는 $a=b=${t}$ 일 때 성립합니다.`], 2 * t) };
+      }
+    ],
+    2: [
+      () => {
+        const a = R(1, 4), t = R(1, 5), b = a * t * t;
+        return { q: r`$x>0$ 일 때, $${a === 1 ? '' : a}x+\dfrac{${b}}{x}$ 의 최솟값을 구하시오.`,
+          a: sol([r`$${a === 1 ? '' : a}x+\dfrac{${b}}{x}\ge2\sqrt{${a}x\cdot\dfrac{${b}}{x}}=2\sqrt{${a * b}}=${2 * a * t}$`, r`등호는 $${a === 1 ? '' : a}x=\dfrac{${b}}{x}$, 즉 $x^2=${t * t}$ 에서 $x=${t}$ 일 때 성립합니다.`], 2 * a * t) };
+      },
+      () => {
+        const s = R(3, 12), v = F(s * s, 4);
+        return { q: r`$a>0,\ b>0$ 이고 $a+b=${s}$ 일 때, $ab$ 의 최댓값을 구하시오.`,
+          a: sol([r`$a+b\ge2\sqrt{ab}$ 에서 $\sqrt{ab}\le\dfrac{${s}}{2}$ 이므로 $ab\le\dfrac{${s * s}}{4}$`, r`등호는 $a=b=\dfrac{${s}}{2}$ 일 때 성립합니다.`], ftex(v)) };
+      }
+    ],
+    3: [
+      () => {
+        const c = R(1, 4), t = R(1, 4), ex = `x+\\dfrac{${t * t}}{x-${c}}`;
+        return { q: r`$x>${c}$ 일 때, $${ex}$ 의 최솟값을 구하시오.`,
+          a: sol([r`$x-${c}>0$ 이므로 $${ex}=(x-${c})+\dfrac{${t * t}}{x-${c}}+${c}$ 로 변형합니다.`, r`$\ge2\sqrt{(x-${c})\cdot\dfrac{${t * t}}{x-${c}}}+${c}=2\cdot${t}+${c}=${2 * t + c}$`, r`등호는 $x-${c}=${t}$, 즉 $x=${c + t}$ 일 때 성립합니다.`], 2 * t + c) };
+      },
+      () => {
+        let p, q, rr, s, root;
+        do { [p, q, rr, s] = [R(1, 4), R(1, 4), R(1, 4), R(1, 4)]; root = Math.sqrt(p * q * rr * s); } while (!Number.isInteger(root));
+        const v = p * rr + q * s + 2 * root;
+        const A = `${p === 1 ? '' : p}x+${q === 1 ? '' : q}y`, B = `\\dfrac{${rr}}{x}+\\dfrac{${s}}{y}`;
+        return { q: r`$x>0,\ y>0$ 일 때, $(${A})\left(${B}\right)$ 의 최솟값을 구하시오.`,
+          a: sol([r`전개하면 $${p * rr}+${p * s}\cdot\dfrac{x}{y}+${q * rr}\cdot\dfrac{y}{x}+${q * s}$`, r`산술·기하평균: $${p * s}\dfrac{x}{y}+${q * rr}\dfrac{y}{x}\ge2\sqrt{${p * s}\cdot${q * rr}}=${2 * root}$`, r`따라서 $\ge${p * rr}+${q * s}+${2 * root}=${v}$ (등호는 $${p * s}\dfrac{x}{y}=${q * rr}\dfrac{y}{x}$ 일 때 성립)`], v) };
+      }
+    ]
+  };
+
+  /* ───────── 7. 함수와 그래프 ───────── */
+
+  const tail = n => n === 0 ? '' : sg(n);
+
+  const T0 = {
+    1: [
+      () => {
+        const a = nz(-4, 4), b = R(-6, 6), k = R(-3, 4);
+        return { q: r`함수 $f(x)=${lin(a, b)}$ 에 대하여 $f(${k})$ 의 값을 구하시오.`,
+          a: sol([r`$x$ 에 $${k}$ 를 대입합니다. $f(${k})=${a}\cdot${par(k)}${sg(b)}$`], a * k + b) };
+      },
+      () => {
+        const c = R(-3, 3), X = distinct(-3, 3, 4).sort((x, y) => x - y), vals = [...new Set(X.map(x => x * x + c))].sort((x, y) => x - y);
+        return { q: r`정의역이 $X=${setT(X)}$ 인 함수 $f(x)=${poly([1, 0, c])}$ 의 치역을 구하시오.`,
+          a: sol([r`정의역의 원소를 차례로 대입합니다. $${X.map(x => `f(${x})=${x * x + c}`).join(',\\ ')}$`, r`치역은 함숫값의 집합이므로 같은 값은 한 번만 씁니다.`], setT(vals)) };
+      }
+    ],
+    2: [
+      () => {
+        const a = nz(-4, 4), b = R(-6, 6), p = R(-3, 1), q = p + R(2, 4), fp = a * p + b, fq = a * q + b;
+        const [u, v] = a > 0 ? [fp, fq] : [fq, fp];
+        return { q: r`함수 $f(x)=ax+b$ ($a${a > 0 ? '>' : '<'}0$) 가 정의역 $\{x\mid${p}\le x\le ${q}\}$ 에서 공역 $\{y\mid${u}\le y\le ${v}\}$ 으로의 일대일대응일 때, $a+b$ 의 값을 구하시오.`,
+          a: sol([a > 0 ? r`$a>0$ 이면 증가함수이므로 $f(${p})=${u},\ f(${q})=${v}$` : r`$a<0$ 이면 감소함수이므로 $f(${p})=${v},\ f(${q})=${u}$`,
+            a > 0 ? r`$${expr([[p, 'a'], [1, 'b']])}=${u},\ ${expr([[q, 'a'], [1, 'b']])}=${v}$ 을 연립하여 $a=${a},\ b=${b}$` : r`$${expr([[p, 'a'], [1, 'b']])}=${v},\ ${expr([[q, 'a'], [1, 'b']])}=${u}$ 을 연립하여 $a=${a},\ b=${b}$`], a + b) };
+      },
+      () => {
+        const m = R(2, 4), n = R(m, 5), t = pick([0, 1, 2]);
+        if (t === 0) return { q: r`두 집합 $X=${setT(Array.from({ length: m }, (_, i) => i + 1))},\ Y=${setT(Array.from({ length: n }, (_, i) => i + 1))}$ 에 대하여 $X$ 에서 $Y$ 로의 함수의 개수를 구하시오.`, a: sol([r`$X$ 의 원소 ${m}개 각각이 $Y$ 의 원소 ${n}개 중 하나에 대응하므로 $${n}^{${m}}=${n ** m}$`], n ** m) };
+        if (t === 1) return { q: r`두 집합 $X=${setT(Array.from({ length: m }, (_, i) => i + 1))},\ Y=${setT(Array.from({ length: n }, (_, i) => i + 1))}$ 에 대하여 $X$ 에서 $Y$ 로의 일대일함수의 개수를 구하시오.`, a: sol([r`서로 다른 원소에 서로 다른 원소가 대응해야 하므로 $${n}\times${n - 1}\times\cdots$ ($${m}$ 개의 곱) $=${P(n, m)}$`], P(n, m)) };
+        return { q: r`두 집합 $X=${setT(Array.from({ length: m }, (_, i) => i + 1))},\ Y=${setT(Array.from({ length: m }, (_, i) => i + 1))}$ 에 대하여 $X$ 에서 $Y$ 로의 일대일대응의 개수를 구하시오.`, a: sol([r`$${m}!=${fact(m)}$`], fact(m)) };
+      },
+      () => {
+        const p = nz(-3, 3), q = R(-4, 4), rr = nz(-4, 4), s = R(-5, 5), x0 = R(-3, 4), k = p * x0 + q;
+        return { q: r`함수 $f$ 가 $f(${lin(p, q)})=${lin(rr, s)}$ 를 만족할 때, $f(${k})$ 의 값을 구하시오.`,
+          a: sol([r`$${lin(p, q)}=${k}$ 에서 $x=${x0}$ 이므로 $x=${x0}$ 를 양변에 대입합니다.`, r`$f(${k})=${rr}\cdot${par(x0)}${sg(s)}=${rr * x0 + s}$`], rr * x0 + s) };
+      }
+    ],
+    3: [
+      () => {
+        const b = 2 * R(-3, 3), c = R(-4, 4), p = R(-4, 1), q = p + R(3, 6), v = -b / 2, f = x => x * x + b * x + c;
+        const cand = [f(p), f(q)]; if (v >= p && v <= q) cand.push(f(v));
+        const mn = Math.min(...cand), mx = Math.max(...cand);
+        return { q: r`정의역이 $\{x\mid${p}\le x\le ${q}\}$ 인 함수 $f(x)=${poly([1, b, c])}$ 의 치역을 구하시오.`,
+          a: sol([r`$f(x)=(x${v === 0 ? '' : v > 0 ? '-' + v : '+' + (-v)})^2${tail(f(v))}$ 이므로 꼭짓점은 $(${v},\ ${f(v)})$`, v >= p && v <= q ? r`$x=${v}$ 가 정의역 안에 있으므로 최솟값은 $f(${v})=${f(v)}$` : r`꼭짓점이 정의역 밖에 있으므로 양 끝값을 비교합니다.`, r`$f(${p})=${f(p)},\ f(${q})=${f(q)}$`], `${mn}\\le y\\le ${mx}`) };
+      },
+      () => {
+        const a = R(-3, 3), b = R(-3, 3), p = R(-5, 0), q = p + R(5, 9), f = x => abs(x - a) + b;
+        const cand = [f(p), f(q)]; if (a >= p && a <= q) cand.push(f(a));
+        const mn = Math.min(...cand), mx = Math.max(...cand);
+        return { q: r`정의역이 $\{x\mid${p}\le x\le ${q}\}$ 인 함수 $f(x)=|${lin(1, -a)}|${tail(b)}$ 의 치역을 구하시오.`,
+          a: sol([a >= p && a <= q ? r`$x=${a}$ 에서 최솟값 $f(${a})=${b}$` : r`$x=${a}$ 는 정의역 밖이므로 양 끝값을 비교합니다.`, r`양 끝값: $f(${p})=${f(p)},\ f(${q})=${f(q)}$`], `${mn}\\le y\\le ${mx}`) };
+      }
+    ]
+  };
+
+  const T1 = {
+    1: [
+      () => {
+        const [a, b, c, d, k] = [nz(-3, 3), R(-4, 4), nz(-3, 3), R(-4, 4), R(-3, 4)], gf = Math.random() < 0.5;
+        if (gf) { const fk = a * k + b; return { q: r`$f(x)=${lin(a, b)},\ g(x)=${lin(c, d)}$ 일 때, $(g\circ f)(${k})$ 의 값을 구하시오.`, a: sol([r`$(g\circ f)(${k})=g(f(${k}))$ 이고 $f(${k})=${fk}$`, r`$g(${fk})=${c}\cdot${par(fk)}${sg(d)}=${c * fk + d}$`], c * fk + d) }; }
+        const gk = c * k + d; return { q: r`$f(x)=${lin(a, b)},\ g(x)=${lin(c, d)}$ 일 때, $(f\circ g)(${k})$ 의 값을 구하시오.`, a: sol([r`$(f\circ g)(${k})=f(g(${k}))$ 이고 $g(${k})=${gk}$`, r`$f(${gk})=${a}\cdot${par(gk)}${sg(b)}=${a * gk + b}$`], a * gk + b) };
+      }
+    ],
+    2: [
+      () => {
+        const a = nz(-4, 4), b = R(-5, 5), x0 = R(-4, 4), k = a * x0 + b;
+        return { q: r`$f(x)=${lin(a, b)}$ 일 때, $f^{-1}(${k})$ 의 값을 구하시오.`,
+          a: sol([r`$f^{-1}(${k})=a$ 이면 $f(a)=${k}$ 입니다. 역함수를 구하지 않고 $f(x)=${k}$ 를 풉니다.`, r`$${lin(a, b)}=${k}$ 에서 $x=${x0}$`], x0) };
+      },
+      () => {
+        const a = pick([2, 3, -2, -3, 4]), b = R(-6, 6);
+        return { q: r`일대일대응인 함수 $f(x)=${lin(a, b)}$ 의 역함수 $f^{-1}(x)$ 를 구하시오.`,
+          a: sol([r`$y=${lin(a, b)}$ 에서 $x$ 에 대해 풀면 $x=\dfrac{y${tail(-b)}}{${a}}$`, r`$x$ 와 $y$ 를 서로 바꿉니다.`], `f^{-1}(x)=${lineY(F(1, a), F(-b, a)).slice(2)}`) };
+      }
+    ],
+    3: [
+      () => {
+        const a = nz(-3, 3), b = R(-3, 3), c = R(-3, 3), d = R(-4, 4);
+        const res = [a * a, 2 * a * b + c * a, b * b + c * b + d];
+        return { q: r`$f(x)=${lin(a, b)},\ g(x)=${poly([1, c, d])}$ 일 때, $(g\circ f)(x)$ 를 구하시오.`,
+          a: sol([r`$(g\circ f)(x)=g(f(x))=(${lin(a, b)})^2${c ? sg(c) + '(' + lin(a, b) + ')' : ''}${tail(d)}$`, r`전개하여 정리합니다.`], poly(res)) };
+      },
+      () => {
+        const a = R(2, 4), b = nz(-4, 4), A = a * a, B = (a + 1) * b;
+        return { q: r`함수 $f(x)=ax+b$ ($a>0$) 에 대하여 $(f\circ f)(x)=${lin(A, B)}$ 일 때, $a+b$ 의 값을 구하시오.`,
+          a: sol([r`$(f\circ f)(x)=a(ax+b)+b=a^2x+(a+1)b$`, r`$a^2=${A}$ 이고 $a>0$ 이므로 $a=${a}$,　$(a+1)b=${B}$ 에서 $b=${b}$`], a + b) };
+      },
+      () => {
+        const [a, b, c, d] = [pick([2, 3, -2, -3]), R(-4, 4), pick([2, 3, -2, -3]), R(-4, 4)], x0 = R(-3, 3), m = a * x0 + b, k = c * m + d;
+        return { q: r`$f(x)=${lin(a, b)},\ g(x)=${lin(c, d)}$ 일 때, $(g\circ f)^{-1}(${k})$ 의 값을 구하시오.`,
+          a: sol([r`$(g\circ f)^{-1}=f^{-1}\circ g^{-1}$ 이므로 $(g\circ f)^{-1}(${k})=f^{-1}(g^{-1}(${k}))$`, r`$g^{-1}(${k})=m$ 이면 $g(m)=${k}$: $${lin(c, d)}=${k}$ 에서 $m=${m}$`, r`$f^{-1}(${m})=n$ 이면 $f(n)=${m}$: $${lin(a, b)}=${m}$ 에서 $n=${x0}$`], x0) };
+      }
+    ]
+  };
+
+  const T2 = {
+    1: [
+      () => {
+        const k = nz(-6, 6), p = R(-4, 4), q = R(-4, 4);
+        const f = `\\dfrac{${k}}{${lin(1, -p)}}${tail(q)}`;
+        return { q: r`함수 $y=${f}$ 의 그래프의 점근선의 방정식을 구하시오.`,
+          a: sol([r`$y=\dfrac{k}{x-p}+q$ 꼴의 점근선은 $x=p,\ y=q$ 입니다.`], `x=${p},\\ y=${q}`) };
+      },
+      () => {
+        const k = nz(-6, 6), p = R(-4, 4), q = R(-4, 4);
+        return { q: r`함수 $y=\dfrac{${k}}{${lin(1, -p)}}${tail(q)}$ 의 정의역과 치역을 구하시오.`,
+          a: sol([r`분모가 $0$ 이 되는 $x=${p}$ 는 정의역에서 제외되고, $y=${q}$ 는 함숫값이 될 수 없습니다.`], r`정의역 $\{x\mid x\ne${p}\}$, 치역 $\{y\mid y\ne${q}\}$`, true) };
+      }
+    ],
+    2: [
+      () => {
+        const a = nz(-3, 3), p = R(-4, 4), k = nz(-6, 6), b = k - a * p;
+        return { q: r`함수 $y=\dfrac{${lin(a, b)}}{${lin(1, -p)}}$ 의 그래프의 점근선의 방정식을 구하시오.`,
+          a: sol([r`분자를 분모로 나누면 $${lin(a, b)}=${a}(${lin(1, -p)})${sg(k)}$ 이므로`, r`$y=${a}+\dfrac{${k}}{${lin(1, -p)}}$ 로 변형됩니다. 점근선은 $x=${p},\ y=${a}$`], `x=${p},\\ y=${a}`) };
+      }
+    ],
+    3: [
+      () => {
+        let a, b, c, d;
+        do { [a, b, c, d] = [nz(-4, 4), R(-4, 4), pick([2, 3, -2, -3]), R(-4, 4)]; } while (a * d - b * c === 0);
+        const px = F(-d, c), qy = F(a, c);
+        return { q: r`함수 $y=\dfrac{${lin(a, b)}}{${lin(c, d)}}$ 의 그래프의 점근선의 방정식을 구하시오.`,
+          a: sol([r`분모가 $0$ 이 되는 값: $${lin(c, d)}=0$ 에서 $x=${ftex(px)}$ (세로 점근선)`, r`$x\to\infty$ 일 때 $y\to\dfrac{${a}}{${c}}=${ftex(qy)}$ (가로 점근선)`], `x=${ftex(px)},\\ y=${ftex(qy)}`) };
+      },
+      () => {
+        const p = R(-3, 3), q = R(-3, 3), d = nz(-3, 3), m = nz(-4, 4), k = d * m, x0 = p + d, y0 = q + m;
+        return { q: r`함수 $y=\dfrac{k}{x${tail(-p)}}${tail(q)}$ 의 그래프가 점 $(${x0},\ ${y0})$ 를 지날 때, 상수 $k$ 의 값을 구하시오.`,
+          a: sol([r`$x=${x0},\ y=${y0}$ 를 대입하면 $${y0}=\dfrac{k}{${x0}${tail(-p)}}${tail(q)}=\dfrac{k}{${d}}${tail(q)}$`, r`$\dfrac{k}{${d}}=${m}$ 이므로 $k=${k}$`], k) };
+      }
+    ]
+  };
+
+  const sqrtT = (a, b) => `\\sqrt{${lin(1, a)}}${tail(b)}`;
+  const mkEq = () => { // √(x+a) = x−b, 근 r1(참), r2(무연근)
+    const b = R(-1, 3), r1 = b + R(2, 5), r2 = 2 * b + 1 - r1, a = b * b - r1 * r2;
+    return { a, b, r1, r2 };
+  };
+
+  const T3 = {
+    1: [
+      () => {
+        const a = R(-5, 5), b = R(-4, 4);
+        return { q: r`함수 $y=${sqrtT(a, b)}$ 의 정의역과 치역을 구하시오.`,
+          a: sol([r`근호 안이 $0$ 이상이어야 하므로 $${lin(1, a)}\ge0$ 에서 $x\ge${-a}$`, r`$\sqrt{\ }\ge0$ 이므로 $y\ge${b}$`], r`정의역 $\{x\mid x\ge${-a}\}$, 치역 $\{y\mid y\ge${b}\}$`, true) };
+      },
+      () => {
+        const a = pick([2, 3, 4]), b = nz(-8, 8), bound = F(-b, a);
+        return { q: r`함수 $y=\sqrt{${lin(a, b)}}$ 의 정의역을 구하시오.`,
+          a: sol([r`$${lin(a, b)}\ge0$ 이므로 $${a}x\ge${-b}$`], `x\\ge ${ftex(bound)}`) };
+      },
+      () => {
+        const a = R(-4, 5), b = R(-4, 4);
+        return { q: r`함수 $y=\sqrt{${lin(-1, a)}}${tail(b)}$ 의 정의역과 치역을 구하시오.`,
+          a: sol([r`$${lin(-1, a)}\ge0$ 에서 $x\le${a}$`, r`$y\ge${b}$`], r`정의역 $\{x\mid x\le${a}\}$, 치역 $\{y\mid y\ge${b}\}$`, true) };
+      }
+    ],
+    2: [
+      () => {
+        const { a, b, r1, r2 } = mkEq();
+        return { q: r`무리방정식 $\sqrt{${lin(1, a)}}=${lin(1, -b)}$ 을 푸시오.`,
+          a: sol([r`양변을 제곱하면 $${lin(1, a)}=(${lin(1, -b)})^2$ 이므로 $${poly([1, -(2 * b + 1), b * b - a])}=0$`, r`$${facs([r1, r2])}=0$ 에서 $x=${Math.min(r1, r2)}$ 또는 $x=${Math.max(r1, r2)}$`, r`검산: $${lin(1, -b)}\ge0$ 이어야 하므로 $x\ge${b}$. $x=${r2}$ 는 $${r2 - b}<0$ 이므로 무연근입니다.`], `x=${r1}`) };
+      },
+      () => {
+        const p = R(-4, 4), q = R(-4, 4);
+        return { q: r`함수 $y=\sqrt{${lin(1, -p)}}${tail(q)}$ 의 그래프는 $y=\sqrt{x}$ 의 그래프를 평행이동한 것이다. 그래프의 시작점의 좌표를 구하시오.`,
+          a: sol([r`$y=\sqrt{x}$ 를 $x$ 축 방향으로 $${p}$, $y$ 축 방향으로 $${q}$ 만큼 평행이동한 그래프이므로 시작점 $(0,0)$ 이 옮겨집니다.`], `(${p},\\ ${q})`) };
+      },
+      () => {
+        const a = R(-4, 4), b = R(-3, 3), s = R(1, 4), x0 = s * s - a, y0 = s + b;
+        return { q: r`함수 $y=\sqrt{x+a}${tail(b)}$ 의 그래프가 점 $(${x0},\ ${y0})$ 를 지날 때, 상수 $a$ 의 값을 구하시오.`,
+          a: sol([r`$x=${x0},\ y=${y0}$ 를 대입하면 $\sqrt{${x0}+a}${tail(b)}=${y0}$`, r`$\sqrt{${x0}+a}=${s}$ 의 양변을 제곱하면 $${x0}+a=${s * s}$`], a) };
+      }
+    ],
+    3: [
+      () => {
+        const a = R(-4, 4), b = R(-3, 3), inv = `${b === 0 ? 'x^2' : `(${lin(1, -b)})^2`}${tail(-a)}`;
+        return { q: r`함수 $f(x)=${sqrtT(a, b)}$ 의 역함수 $f^{-1}(x)$ 와 그 정의역을 구하시오.`,
+          a: sol([r`$y=${sqrtT(a, b)}$ 에서 $y${tail(-b)}=\sqrt{${lin(1, a)}}$ 이므로 양변을 제곱하면 $(y${tail(-b)})^2=${lin(1, a)}$`, r`$x=(y${tail(-b)})^2${tail(-a)}$ 에서 $x$ 와 $y$ 를 바꿉니다. 역함수의 정의역은 $f$ 의 치역 $y\ge${b}$ 입니다.`], r`$f^{-1}(x)=${inv}\ (x\ge${b})$`, true) };
+      },
+      () => {
+        const { a, b, r1, r2 } = mkEq();
+        return { q: r`함수 $f(x)=${sqrtT(a, b)}$ 의 그래프와 그 역함수 $y=f^{-1}(x)$ 의 그래프가 만나는 점의 $x$ 좌표를 구하시오.`,
+          a: sol([r`$f$ 는 증가함수이므로 $f$ 와 $f^{-1}$ 의 교점은 직선 $y=x$ 위에 있습니다.`, r`$\sqrt{${lin(1, a)}}${tail(b)}=x$, 즉 $\sqrt{${lin(1, a)}}=${lin(1, -b)}$ 를 풉니다.`, r`양변을 제곱하면 $${poly([1, -(2 * b + 1), b * b - a])}=0$ 이므로 $x=${Math.min(r1, r2)}$ 또는 $x=${Math.max(r1, r2)}$`, r`$${lin(1, -b)}\ge0$ 이어야 하므로 $x=${r2}$ 는 무연근입니다.`], r1) };
+      }
+    ]
+  };
+
+  Object.assign(window.GEN, {
+    logic: [S0, S1, S2, S3],
+    function: [T0, T1, T2, T3]
+  });
+})();
+
+  </script>
+  <script>
+/* 쉬운 수학 학습 - 해시 라우팅 + 문제 풀기 (전체를 IIFE로 감싸 전역 충돌 방지) */
+(function () {
+  const H = window.H;
+  const fix = html => H.fixMath(html || '');
+
+  const SUBJECTS = [
+    { id: 'math', name: '수학', desc: '개념과 계산 꿀팁', ready: true },
+    { id: 'korean', name: '국어', desc: '', ready: false },
+    { id: 'english', name: '영어', desc: '', ready: false },
+    { id: 'science', name: '과학', desc: '', ready: false },
+  ];
+  const MATH_GRADES = [
+    { group: '초등학교', items: ['초1', '초2', '초3', '초4', '초5', '초6'].map((n, i) => ({ id: 'e' + (i + 1), name: n })) },
+    { group: '중학교', items: ['중1', '중2', '중3'].map((n, i) => ({ id: 'm' + (i + 1), name: n })) },
+    { group: '고등학교', items: ['고1', '고2', '고3'].map((n, i) => ({ id: 'h' + (i + 1), name: n })) },
+  ];
+  const LEVELS = ['기초', '응용', '심화'];
+  const TOTAL = 20, STEP = 5;
+
+  function readyGrades() {
+    const g = {};
+    if (window.MATH_HIGH1) g.h1 = window.MATH_HIGH1;
+    return g;
+  }
+
+  const app = document.getElementById('app');
+  const crumbs = document.getElementById('crumbs');
+
+  function setCrumbs(list) {
+    crumbs.innerHTML = list.map((c, i) => {
+      const sep = i > 0 ? '<span class="sep">/</span>' : '';
+      return sep + (c.href ? `<a href="${c.href}">${c.label}</a>` : `<span>${c.label}</span>`);
+    }).join('');
+  }
+
+  function typeset(root) {
+    if (window.renderMathInElement) {
+      window.renderMathInElement(root || app, {
+        delimiters: [{ left: '$$', right: '$$', display: true }, { left: '$', right: '$', display: false }],
+        throwOnError: false,
+      });
+    }
+  }
+
+  /* ---------- 화면 ---------- */
+  function viewSubjects() {
+    setCrumbs([]);
+    app.innerHTML = `
+      <h1>무엇을 공부할까요?</h1>
+      <p class="lead">과목을 선택하세요.</p>
+      <div class="grid">
+        ${SUBJECTS.map(s => s.ready
+          ? `<a class="choice" href="#/${s.id}"><div class="name">${s.name}</div><div class="meta">${s.desc}</div></a>`
+          : `<div class="choice disabled"><div class="name">${s.name}</div><span class="badge">준비 중</span></div>`).join('')}
+      </div>`;
+  }
+
+  function viewGrades() {
+    setCrumbs([{ label: '과목', href: '#/' }, { label: '수학' }]);
+    const ready = readyGrades();
+    app.innerHTML = `
+      <h1>수학</h1>
+      <p class="lead">학년을 선택하세요.</p>
+      ${MATH_GRADES.map(g => `
+        <div class="group-title">${g.group}</div>
+        <div class="grid">
+          ${g.items.map(it => ready[it.id]
+            ? `<a class="choice" href="#/math/${it.id}"><div class="name">${it.name}</div></a>`
+            : `<div class="choice disabled"><div class="name">${it.name}</div><span class="badge">준비 중</span></div>`).join('')}
+        </div>`).join('')}`;
+  }
+
+  function viewUnits(gradeId) {
+    const data = readyGrades()[gradeId];
+    if (!data) return go('#/math');
+    setCrumbs([{ label: '과목', href: '#/' }, { label: '수학', href: '#/math' }, { label: data.gradeName }]);
+    const parts = [...new Set(data.units.map(u => u.part))];
+    app.innerHTML = `
+      <h1>${data.gradeName} 수학</h1>
+      <p class="lead">공부할 단원을 선택하세요.</p>
+      ${parts.map(p => `
+        <div class="group-title">${p}</div>
+        <div class="grid wide">
+          ${data.units.filter(u => u.part === p).map(u => `
+            <a class="choice" href="#/math/${gradeId}/${u.id}">
+              <div class="unit-num">${u.no}단원</div>
+              <div class="name">${u.title}</div>
+              <div class="meta">${u.summary}</div>
+            </a>`).join('')}
+        </div>`).join('')}`;
+  }
+
+  function viewUnit(gradeId, unitId) {
+    const data = readyGrades()[gradeId];
+    const unit = data && data.units.find(u => u.id === unitId);
+    if (!unit) return go('#/math');
+    setCrumbs([
+      { label: '과목', href: '#/' }, { label: '수학', href: '#/math' },
+      { label: data.gradeName, href: `#/math/${gradeId}` }, { label: unit.title },
+    ]);
+    const toc = unit.sections.map((s, i) => `<li><a href="#" data-jump="s${i}">${s.title}</a></li>`).join('');
+    const hasGen = i => !!(window.GEN[unit.id] && window.GEN[unit.id][i]);
+
+    app.innerHTML = fix(`
+      <a class="back" href="#/math/${gradeId}">← 단원 목록</a>
+      <div class="unit-head">
+        <div class="part">${unit.part} · ${unit.no}단원</div>
+        <h1>${unit.title}</h1>
+        <p class="lead">${unit.summary}</p>
+      </div>
+      <ul class="toc">${toc}<li><a href="#" data-jump="ex">예제</a></li></ul>
+      ${unit.sections.map((s, i) => `
+        <section class="card" id="s${i}" data-si="${i}">
+          <h2>${s.title}</h2>
+          ${s.body}
+          ${s.tip ? `<div class="tip"><strong class="label">꿀팁</strong>${s.tip}</div>` : ''}
+          ${hasGen(i) ? `<button class="practice-btn" type="button">✏️ 문제 풀기</button><div class="practice" hidden></div>` : ''}
+        </section>`).join('')}
+      <div class="section-label" id="ex">예제로 확인하기</div>
+      ${unit.examples.map(e => `
+        <details class="example">
+          <summary>${e.q}<div class="hint">직접 풀어 본 뒤 눌러서 풀이를 확인하세요.</div></summary>
+          <div class="answer">${e.a}</div>
+        </details>`).join('')}
+    `);
+
+    app.querySelectorAll('[data-jump]').forEach(a => a.addEventListener('click', ev => {
+      ev.preventDefault();
+      document.getElementById(a.dataset.jump).scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }));
+
+    app.querySelectorAll('section.card[data-si]').forEach(sec => {
+      const btn = sec.querySelector('.practice-btn');
+      if (btn) setupPractice(sec, unit.id, +sec.dataset.si, btn);
+    });
+  }
+
+  /* ---------- 문제 풀기 ---------- */
+  function setupPractice(sec, unitId, si, btn) {
+    const box = sec.querySelector('.practice');
+    const st = { level: null, pool: [], shown: 0 };
+
+    box.innerHTML = `
+      <div class="levels"><span class="lv-label">난이도</span>
+        ${LEVELS.map((l, i) => `<button type="button" class="chip" data-lv="${i}">${l}</button>`).join('')}
+      </div>
+      <div class="list"></div>`;
+    const list = box.querySelector('.list');
+
+    btn.addEventListener('click', () => {
+      box.hidden = !box.hidden;
+      btn.textContent = box.hidden ? '✏️ 문제 풀기' : '문제 접기';
+      btn.classList.toggle('ghost', !box.hidden);
+    });
+
+    box.querySelectorAll('.chip').forEach(ch => ch.addEventListener('click', () => {
+      st.level = +ch.dataset.lv;
+      box.querySelectorAll('.chip').forEach(c => c.classList.toggle('on', c === ch));
+      st.pool = window.makePool(unitId, si, st.level + 1, TOTAL);
+      st.shown = 0;
+      list.innerHTML = '';
+      showMore();
+    }));
+
+    function showMore() {
+      list.querySelectorAll('.more-row, .done-msg, .progress').forEach(n => n.remove());
+      const from = st.shown, to = Math.min(st.shown + STEP, st.pool.length);
+      const frag = document.createDocumentFragment();
+      for (let i = from; i < to; i++) frag.appendChild(makeProblem(st.pool[i], i + 1));
+      list.appendChild(frag);
+      st.shown = to;
+
+      const info = document.createElement('div');
+      info.className = 'progress';
+      info.textContent = `${LEVELS[st.level]} · ${st.shown} / ${st.pool.length} 문제`;
+      list.insertBefore(info, list.firstChild);
+
+      if (st.shown < st.pool.length) {
+        const row = document.createElement('div');
+        row.className = 'more-row';
+        row.innerHTML = `<button type="button" class="practice-btn">더 풀기 (+${Math.min(STEP, st.pool.length - st.shown)}문제)</button>`;
+        row.querySelector('button').addEventListener('click', showMore);
+        list.appendChild(row);
+      } else {
+        const d = document.createElement('div');
+        d.className = 'done-msg';
+        d.innerHTML = `🎉 ${LEVELS[st.level]} 문제를 모두 풀었어요!<br>다른 난이도를 골라 보세요.<br><button type="button" class="practice-btn ghost">같은 난이도 새 문제 20개</button>`;
+        d.querySelector('button').addEventListener('click', () => {
+          box.querySelector(`.chip[data-lv="${st.level}"]`).click();
+        });
+        list.appendChild(d);
+      }
+      typeset(list);
+    }
+  }
+
+  function makeProblem(p, n) {
+    const el = document.createElement('div');
+    el.className = 'prob';
+    el.innerHTML = `
+      <div class="pq"><div class="pn">${n}.</div><div class="pt">${p.q}</div></div>
+      <div class="tools">
+        <button type="button" class="tool" data-t="pen">✏️ 연필</button>
+        <button type="button" class="tool" data-t="eraser">🧽 지우개</button>
+        <button type="button" class="tool" data-t="clear">전체 지우기</button>
+        <button type="button" class="tool" data-t="grow">＋ 공간</button>
+        <button type="button" class="tool solbtn" data-t="sol">정답·풀이 보기</button>
+      </div>
+      <div class="work"><span class="ph">여기에 풀이를 적어 보세요 (연필 버튼을 누르세요)</span><canvas class="ink"></canvas></div>
+      <div class="sol" hidden>${p.a}</div>`;
+    const work = el.querySelector('.work');
+    const cv = el.querySelector('canvas');
+    const ph = el.querySelector('.ph');
+    const sol = el.querySelector('.sol');
+    const ink = makeInk(cv, work);
+    let mode = null; // 'pen' | 'eraser' | null
+
+    function setMode(m) {
+      mode = m;
+      work.classList.toggle('pen', !!m);
+      el.querySelector('[data-t="pen"]').classList.toggle('on', m === 'pen');
+      el.querySelector('[data-t="eraser"]').classList.toggle('on', m === 'eraser');
+      ink.setEraser(m === 'eraser');
+    }
+    el.querySelector('.tools').addEventListener('click', ev => {
+      const b = ev.target.closest('.tool');
+      if (!b) return;
+      const t = b.dataset.t;
+      if (t === 'pen') setMode(mode === 'pen' ? null : 'pen');
+      else if (t === 'eraser') setMode(mode === 'eraser' ? null : 'eraser');
+      else if (t === 'clear') { ink.clear(); ph.style.display = ''; }
+      else if (t === 'grow') { work.style.height = (work.offsetHeight + 120) + 'px'; }
+      else if (t === 'sol') {
+        sol.hidden = !sol.hidden;
+        b.textContent = sol.hidden ? '정답·풀이 보기' : '정답·풀이 숨기기';
+        if (!sol.hidden) typeset(sol);
+      }
+    });
+    cv.addEventListener('pointerdown', () => { ph.style.display = 'none'; });
+    return el;
+  }
+
+  /* 캔버스 필기: 포인터 이벤트, 크기 변화 시 그림 유지 */
+  function makeInk(cv, wrap) {
+    const ctx = cv.getContext('2d');
+    let eraser = false, drawing = false, last = null, w = 0, h = 0, dpr = 1;
+
+    function resize() {
+      const rw = wrap.clientWidth, rh = wrap.clientHeight;
+      if (!rw || !rh || (rw === w && rh === h)) return;
+      const keep = document.createElement('canvas');
+      keep.width = cv.width; keep.height = cv.height;
+      if (cv.width) keep.getContext('2d').drawImage(cv, 0, 0);
+      dpr = window.devicePixelRatio || 1;
+      w = rw; h = rh;
+      cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (keep.width) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(keep, 0, 0); ctx.restore(); }
+    }
+    if (window.ResizeObserver) new ResizeObserver(resize).observe(wrap);
+    window.addEventListener('resize', resize);
+    setTimeout(resize, 0);
+
+    const pos = e => { const r = cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+    function style() {
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.globalCompositeOperation = eraser ? 'destination-out' : 'source-over';
+      ctx.strokeStyle = '#1e3a8a';
+      ctx.lineWidth = eraser ? 22 : 2.2;
+    }
+    cv.addEventListener('pointerdown', e => {
+      resize();
+      drawing = true; last = pos(e);
+      try { cv.setPointerCapture(e.pointerId); } catch (_) {}
+      style(); ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(last.x + .01, last.y + .01); ctx.stroke();
+      e.preventDefault();
+    });
+    cv.addEventListener('pointermove', e => {
+      if (!drawing) return;
+      const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+      style();
+      for (const ev of (evs.length ? evs : [e])) {
+        const p = pos(ev);
+        ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+        last = p;
+      }
+      e.preventDefault();
+    });
+    const end = () => { drawing = false; last = null; };
+    cv.addEventListener('pointerup', end);
+    cv.addEventListener('pointercancel', end);
+    cv.addEventListener('pointerleave', end);
+
+    return {
+      setEraser(v) { eraser = v; },
+      clear() { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); ctx.restore(); },
+    };
+  }
+
+  /* ---------- 라우터 ---------- */
+  function go(hash) { location.hash = hash; }
+
+  function route() {
+    const parts = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
+    if (parts.length === 0) viewSubjects();
+    else if (parts[0] === 'math' && parts.length === 1) viewGrades();
+    else if (parts[0] === 'math' && parts.length === 2) viewUnits(parts[1]);
+    else if (parts[0] === 'math' && parts.length >= 3) viewUnit(parts[1], parts[2]);
+    else viewSubjects();
+    window.scrollTo(0, 0);
+    typeset();
+  }
+
+  window.addEventListener('hashchange', route);
+  window.addEventListener('load', route);
+  document.addEventListener('DOMContentLoaded', () => setTimeout(() => typeset(), 300));
+})();
+
+  </script>
+</body></html>
