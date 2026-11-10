@@ -261,6 +261,11 @@ a.chip { text-decoration: none; display: inline-block; }
 details.more { border: 1px solid var(--line); border-radius: 12px; padding: 4px 14px 10px; margin: 10px 0; background: #fff; }
 details.more > summary { cursor: pointer; font-weight: 700; padding: 8px 0; color: var(--accent); }
 .easy .katex { font-size: 1.1em; }
+details.easy-toggle { margin: 16px 0 12px; }
+details.easy-toggle > summary { display: inline-block; cursor: pointer; list-style: none; background: #ffb300; color: #fff; font-weight: 800; font-size: 16px; padding: 10px 20px; border-radius: 999px; box-shadow: 0 2px 6px rgba(255,179,0,.4); user-select: none; }
+details.easy-toggle > summary::-webkit-details-marker { display: none; }
+details.easy-toggle[open] > summary { background: #8d6e00; box-shadow: none; }
+details.easy-toggle[open] > summary::after { content: ' (접기)'; font-weight: 600; }
   </style>
 </head>
 <body>
@@ -48746,9 +48751,8 @@ window.makePool = function (unitId, si, level, n) {
       ${unit.sections.map((s, i) => `
         <section class="card" id="s${i}" data-si="${i}">
           <h2>${s.title}</h2>
-          ${easyOf(unit.id, i)
-            ? easyOf(unit.id, i) + `<details class="more"><summary>📚 더 자세한 설명 보기 (교과서 수준)</summary>${s.body}${s.tip ? `<div class="tip"><strong class="label">TIP</strong>${s.tip}</div>` : ''}</details>`
-            : `${s.body}${s.tip ? `<div class="tip"><strong class="label">TIP</strong>${s.tip}</div>` : ''}`}
+          ${s.body}${s.tip ? `<div class="tip"><strong class="label">TIP</strong>${s.tip}</div>` : ''}
+          ${easyOf(unit.id, i) ? `<details class="easy-toggle"><summary>🧒 쉽게 이해하기 (초등학생도 OK)</summary>${easyOf(unit.id, i)}</details>` : ''}
           ${hasGen(i) ? `<a class="practice-btn" href="#/math/${gradeId}/${unit.id}/practice/${i}/0">✏️ 문제 풀기</a>` : ''}
         </section>`).join('')}
       <div class="section-label" id="ex">예제로 확인하기</div>
